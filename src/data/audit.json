@@ -1,0 +1,16 @@
+{
+  "logs": [
+    {
+      "id": "audit_1786873964935_vwn0jq",
+      "actorId": "usr_admin_001",
+      "actorName": "Admin",
+      "action": "APPROVE_SELLER",
+      "targetType": "seller",
+      "targetId": "usr_1786873936144_ew8fgl",
+      "metadata": {
+        "email": "raj-seller@gmail.com"
+      },
+      "createdAt": "2026-08-16T09:52:44.935Z"
+    }
+  ]
+}

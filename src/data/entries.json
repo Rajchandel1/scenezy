@@ -1,0 +1,88 @@
+{
+  "entries": [
+    {
+      "id": "entry_1786872541883_a79p9a",
+      "passId": "unknown",
+      "eventId": "unknown",
+      "eventTitle": "Unknown",
+      "passTypeName": "Unknown",
+      "credential": "pass_1786872...",
+      "result": "INVALID",
+      "reason": "Credential not recognized",
+      "scannedAt": "2026-08-16T09:29:01.883Z",
+      "gate": "Main Gate"
+    },
+    {
+      "id": "entry_1786872582643_uw55tk",
+      "passId": "unknown",
+      "eventId": "unknown",
+      "eventTitle": "Unknown",
+      "passTypeName": "Unknown",
+      "credential": "pass_1786872...",
+      "result": "INVALID",
+      "reason": "Credential not recognized",
+      "scannedAt": "2026-08-16T09:29:42.643Z",
+      "gate": "Main Gate"
+    },
+    {
+      "id": "entry_1786872595271_c8bpr6",
+      "passId": "unknown",
+      "eventId": "unknown",
+      "eventTitle": "Unknown",
+      "passTypeName": "Unknown",
+      "credential": "PASS_1786872...",
+      "result": "INVALID",
+      "reason": "Credential not recognized",
+      "scannedAt": "2026-08-16T09:29:55.271Z",
+      "gate": "Main Gate"
+    },
+    {
+      "id": "entry_1786872603482_hmk3c7",
+      "passId": "unknown",
+      "eventId": "unknown",
+      "eventTitle": "Unknown",
+      "passTypeName": "Unknown",
+      "credential": "pass_1786872...",
+      "result": "INVALID",
+      "reason": "Credential not recognized",
+      "scannedAt": "2026-08-16T09:30:03.482Z",
+      "gate": "Main Gate"
+    },
+    {
+      "id": "entry_1786872640686_qqxvh3",
+      "passId": "unknown",
+      "eventId": "unknown",
+      "eventTitle": "Unknown",
+      "passTypeName": "Unknown",
+      "credential": "pass_1786872...",
+      "result": "INVALID",
+      "reason": "Credential not recognized",
+      "scannedAt": "2026-08-16T09:30:40.686Z",
+      "gate": "Main Gate"
+    },
+    {
+      "id": "entry_1786873032422_ncyrjj",
+      "passId": "pass_1786872566170_naaywe",
+      "eventId": "evt_1786872102728_4cr7zb",
+      "eventTitle": "freshers party",
+      "passTypeName": "General",
+      "credential": "PASS_rTWWauabCqs...",
+      "result": "VALID",
+      "reason": "Entry approved",
+      "scannedAt": "2026-08-16T09:37:12.422Z",
+      "gate": "Main Gate"
+    },
+    {
+      "id": "entry_1786873037019_adb6cb",
+      "passId": "pass_1786872566170_naaywe",
+      "eventId": "evt_1786872102728_4cr7zb",
+      "eventTitle": "freshers party",
+      "passTypeName": "General",
+      "credential": "PASS_rTWWauabCqs...",
+      "result": "INVALID",
+      "reason": "Pass already used",
+      "scannedAt": "2026-08-16T09:37:17.019Z",
+      "gate": "Main Gate"
+    }
+  ]
+}

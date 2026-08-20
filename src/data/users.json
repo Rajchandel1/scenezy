@@ -1,0 +1,39 @@
+{
+  "users": [
+    {
+      "id": "usr_admin_001",
+      "email": "admin@scenezy.app",
+      "name": "Admin",
+      "password": "admin123",
+      "role": "ADMIN",
+      "createdAt": "2026-08-16T00:00:00Z"
+    },
+    {
+      "id": "usr_demo_001",
+      "email": "demo@scenezy.app",
+      "name": "Demo User",
+      "password": "demo123",
+      "role": "USER",
+      "createdAt": "2026-08-16T00:00:00Z"
+    },
+    {
+      "id": "usr_seller_001",
+      "email": "seller@scenezy.app",
+      "name": "Event Seller",
+      "password": "seller123",
+      "role": "SELLER",
+      "approved": true,
+      "createdAt": "2026-08-16T00:00:00Z"
+    },
+    {
+      "id": "usr_1786873936144_ew8fgl",
+      "email": "raj-seller@gmail.com",
+      "name": "raj seller",
+      "password": "123456",
+      "role": "SELLER",
+      "createdAt": "2026-08-16T09:52:16.144Z",
+      "approved": true,
+      "rejected": false
+    }
+  ]
+}

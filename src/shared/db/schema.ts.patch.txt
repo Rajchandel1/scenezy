@@ -1,0 +1,6 @@
+ADD this column to the users table in schema.ts:
+
+  emailVerified: boolean('email_verified').default(false),
+
+Or run this SQL in Supabase:
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;

@@ -1,0 +1,183 @@
+{
+  "events": [
+    {
+      "id": "evt_001",
+      "title": "College Night",
+      "description": "The biggest college fest of the year. Live DJ, dance battles, and unlimited fun.",
+      "date": "2026-08-25",
+      "time": "20:00",
+      "location": "Ahmedabad",
+      "venue": "Riverfront Arena",
+      "category": "Party",
+      "sellerId": "usr_seller_001",
+      "sellerName": "EventCraft",
+      "status": "ACTIVE",
+      "passes": [
+        {
+          "id": "pt_001",
+          "name": "General",
+          "price": 499,
+          "benefits": "Standard entry",
+          "available": 120,
+          "sold": 0,
+          "transferAllowed": true
+        },
+        {
+          "id": "pt_002",
+          "name": "VIP",
+          "price": 999,
+          "benefits": "Priority entry + VIP area",
+          "available": 40,
+          "sold": 0,
+          "transferAllowed": true
+        },
+        {
+          "id": "pt_003",
+          "name": "VVIP",
+          "price": 1999,
+          "benefits": "Premium access + backstage",
+          "available": 10,
+          "sold": 0,
+          "transferAllowed": true
+        }
+      ],
+      "createdAt": "2026-08-16T00:00:00Z"
+    },
+    {
+      "id": "evt_002",
+      "title": "Tech Summit 2026",
+      "description": "India's largest student tech conference. Workshops, talks, and networking.",
+      "date": "2026-09-05",
+      "time": "09:00",
+      "location": "Bangalore",
+      "venue": "NIMHANS Convention Center",
+      "category": "Conference",
+      "sellerId": "usr_seller_001",
+      "sellerName": "TechGujarat",
+      "status": "ACTIVE",
+      "passes": [
+        {
+          "id": "pt_004",
+          "name": "Student",
+          "price": 299,
+          "benefits": "All sessions access",
+          "available": 200,
+          "sold": 0,
+          "transferAllowed": true
+        },
+        {
+          "id": "pt_005",
+          "name": "Pro",
+          "price": 799,
+          "benefits": "Workshop + lunch + kit",
+          "available": 50,
+          "sold": 0,
+          "transferAllowed": true
+        }
+      ],
+      "createdAt": "2026-08-16T00:00:00Z"
+    },
+    {
+      "id": "evt_003",
+      "title": "Monsoon Music Fest",
+      "description": "Open-air music festival under the rain. Indie artists, food stalls, good vibes.",
+      "date": "2026-08-20",
+      "time": "17:00",
+      "location": "Pune",
+      "venue": "Amanora Lawns",
+      "category": "Music",
+      "sellerId": "usr_seller_001",
+      "sellerName": "SoundWave",
+      "status": "ACTIVE",
+      "passes": [
+        {
+          "id": "pt_006",
+          "name": "Early Bird",
+          "price": 399,
+          "benefits": "Entry + free drink",
+          "available": 80,
+          "sold": 0,
+          "transferAllowed": true
+        },
+        {
+          "id": "pt_007",
+          "name": "Group (4)",
+          "price": 1299,
+          "benefits": "4 entries + photo booth",
+          "available": 24,
+          "sold": 1,
+          "transferAllowed": false
+        }
+      ],
+      "createdAt": "2026-08-16T00:00:00Z"
+    },
+    {
+      "id": "evt_004",
+      "title": "Startup Pitch Night",
+      "description": "Watch 10 startups pitch live. Network with founders and investors.",
+      "date": "2026-09-12",
+      "time": "18:30",
+      "location": "Mumbai",
+      "venue": "WeWork BKC",
+      "category": "Business",
+      "sellerId": "usr_seller_001",
+      "sellerName": "FounderHub",
+      "status": "ACTIVE",
+      "passes": [
+        {
+          "id": "pt_008",
+          "name": "Audience",
+          "price": 199,
+          "benefits": "Seated entry",
+          "available": 100,
+          "sold": 0,
+          "transferAllowed": true
+        },
+        {
+          "id": "pt_009",
+          "name": "Networker",
+          "price": 599,
+          "benefits": "Post-event mixer access",
+          "available": 30,
+          "sold": 0,
+          "transferAllowed": true
+        }
+      ],
+      "createdAt": "2026-08-16T00:00:00Z"
+    },
+    {
+      "id": "evt_005",
+      "title": "Comedy Circus",
+      "description": "Stand-up comedy night featuring top Indian comedians. 18+ only.",
+      "date": "2026-08-30",
+      "time": "20:00",
+      "location": "Delhi",
+      "venue": "The Little Door",
+      "category": "Comedy",
+      "sellerId": "usr_seller_001",
+      "sellerName": "LaughOut",
+      "status": "ACTIVE",
+      "passes": [
+        {
+          "id": "pt_010",
+          "name": "General",
+          "price": 349,
+          "benefits": "Standard seating",
+          "available": 60,
+          "sold": 0,
+          "transferAllowed": true
+        },
+        {
+          "id": "pt_011",
+          "name": "Front Row",
+          "price": 699,
+          "benefits": "Front row + meet & greet",
+          "available": 15,
+          "sold": 0,
+          "transferAllowed": true
+        }
+      ],
+      "createdAt": "2026-08-16T00:00:00Z"
+    }
+  ]
+}

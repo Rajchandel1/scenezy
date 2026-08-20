@@ -1,0 +1,15 @@
+{
+  "notifications": [
+    {
+      "id": "notif_1786887038532_a1urr9",
+      "userId": "usr_demo_001",
+      "type": "purchase",
+      "title": "Pass Purchased! 🎉",
+      "body": "You got 1 pass(es) for Monsoon Music Fest. Show QR at entry!",
+      "icon": "🎫",
+      "read": true,
+      "createdAt": "2026-08-16T13:30:38.532Z",
+      "link": "/passes"
+    }
+  ]
+}
