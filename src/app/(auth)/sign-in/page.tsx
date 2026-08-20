@@ -37,7 +37,6 @@ function SignInContent() {
     setError('');
     try {
       await authService.loginWithGoogle();
-      // Redirect happens automatically via Supabase
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign in failed');
       setGoogleLoading(false);
@@ -46,7 +45,7 @@ function SignInContent() {
 
   return (
     <div className="space-y-5">
-      {/* Google Sign In Button */}
+      {/* Google Sign In */}
       <button onClick={handleGoogleSignIn} disabled={googleLoading}
         className="w-full flex items-center justify-center gap-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-white font-medium py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50">
         {googleLoading ? (
@@ -62,7 +61,6 @@ function SignInContent() {
         <span>{googleLoading ? 'Connecting...' : 'Continue with Google'}</span>
       </button>
 
-      {/* Divider */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-neutral-800" />
         <span className="text-neutral-600 text-xs uppercase tracking-wider">or</span>
@@ -84,6 +82,14 @@ function SignInContent() {
             placeholder="••••••••" />
         </div>
         {error && <div className="bg-red-950/30 border border-red-900/50 text-red-400 text-sm rounded-xl px-4 py-3">{error}</div>}
+        
+        {/* Forgot Password Link */}
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-[#c4f000] text-xs hover:underline font-medium">
+            Forgot password?
+          </Link>
+        </div>
+
         <button type="submit" disabled={loading}
           className="w-full bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
           {loading ? 'Signing in...' : 'Sign In'}

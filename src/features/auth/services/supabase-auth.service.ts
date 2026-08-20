@@ -1,5 +1,5 @@
 import { createSupabaseBrowserClient } from '@/shared/lib/supabase-client';
-import { AuthUser, LoginInput, RegisterInput, UserRole } from '../types';
+import { AuthUser, LoginInput, RegisterInput } from '../types';
 
 const SESSION_KEY = 'pass_session_user';
 
@@ -18,14 +18,13 @@ export class SupabaseAuthService {
     if (error) throw new Error(error.message.includes('Invalid') ? 'Invalid email or password' : error.message);
     if (!data.user) throw new Error('Login failed');
 
-    // Check if user exists in our DB and is verified
+    // Check our DB for email_verified
     const { data: profile } = await supabase
       .from('users')
       .select('role, name, email_verified')
       .eq('id', data.user.id)
       .single();
 
-    // If not verified yet, block login
     if (profile && !profile.email_verified) {
       await supabase.auth.signOut();
       throw new Error('Please verify your email first. Check your inbox.');
@@ -39,16 +38,18 @@ export class SupabaseAuthService {
       createdAt: data.user.created_at,
     };
 
+    // Store in localStorage AND set cookie for middleware
     if (typeof window !== 'undefined') {
       localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      document.cookie = `${SESSION_KEY}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=86400; SameSite=Lax`;
     }
+    
     return user;
   }
 
   async register(input: RegisterInput): Promise<{ needsVerification: boolean }> {
     const supabase = this.getClient();
 
-    // Step 1: Create user in Supabase Auth (no email sent by Supabase)
     const { data, error } = await supabase.auth.signUp({
       email: input.email,
       password: input.password,
@@ -58,7 +59,6 @@ export class SupabaseAuthService {
     if (error) throw new Error(error.message);
     if (!data.user) throw new Error('Registration failed');
 
-    // Step 2: Create profile in our users table (email_verified = false)
     await supabase.from('users').upsert({
       id: data.user.id,
       email: input.email,
@@ -67,25 +67,27 @@ export class SupabaseAuthService {
       email_verified: false,
     }, { onConflict: 'id' });
 
-    // Step 3: Send verification email via OUR Nodemailer (not Supabase!)
-    await fetch('/api/data/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'send-verification',
-        userId: data.user.id,
-        email: input.email,
-        name: input.name,
-      }),
-    });
+    // Send verification email
+    try {
+      await fetch('/api/data/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'send-verification',
+          userId: data.user.id,
+          email: input.email,
+          name: input.name,
+        }),
+      });
+    } catch (err) {
+      console.error('[Auth] Failed to send verification email:', err);
+    }
 
-    // Sign out - user must verify first
     await supabase.auth.signOut();
-
     return { needsVerification: true };
   }
 
-  async completeRegistration(userId: string, email: string, name: string, role: UserRole): Promise<AuthUser> {
+  async completeRegistration(userId: string, email: string, name: string, role: string): Promise<AuthUser> {
     const supabase = this.getClient();
 
     await supabase.from('users').upsert({
@@ -93,13 +95,16 @@ export class SupabaseAuthService {
       email,
       name,
       role,
-      email_verified: true, // OAuth users are pre-verified
+      email_verified: true,
     }, { onConflict: 'id' });
 
     const user: AuthUser = { id: userId, email, name, role, createdAt: new Date().toISOString() };
+    
     if (typeof window !== 'undefined') {
       localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      document.cookie = `${SESSION_KEY}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=86400; SameSite=Lax`;
     }
+    
     return user;
   }
 
@@ -118,11 +123,16 @@ export class SupabaseAuthService {
   async logout(): Promise<void> {
     const supabase = this.getClient();
     await supabase.auth.signOut();
-    if (typeof window !== 'undefined') localStorage.removeItem(SESSION_KEY);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(SESSION_KEY);
+      document.cookie = `${SESSION_KEY}=; path=/; max-age=0`;
+    }
   }
 
   async getCurrentUser(): Promise<AuthUser | null> {
     if (typeof window === 'undefined') return null;
+    
     const stored = localStorage.getItem(SESSION_KEY);
     if (stored) return JSON.parse(stored);
 
@@ -137,18 +147,25 @@ export class SupabaseAuthService {
       .single();
 
     if (!profile) {
-      await this.completeRegistration(session.user.id, session.user.email!, session.user.user_metadata?.name || session.user.email!.split('@')[0], session.user.user_metadata?.role || 'USER');
+      await this.completeRegistration(
+        session.user.id,
+        session.user.email!,
+        session.user.user_metadata?.name || session.user.email!.split('@')[0],
+        session.user.user_metadata?.role || 'USER'
+      );
     }
 
     const user: AuthUser = {
       id: session.user.id,
       email: session.user.email!,
       name: profile?.name || session.user.user_metadata?.name || session.user.email!.split('@')[0],
-      role: (profile?.role as UserRole | undefined) || 'USER',
+      role: profile?.role || 'USER',
       createdAt: session.user.created_at,
     };
 
     localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    document.cookie = `${SESSION_KEY}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=86400; SameSite=Lax`;
+    
     return user;
   }
 
@@ -160,7 +177,12 @@ export class SupabaseAuthService {
     await fetch('/api/data/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'send-verification', userId: userData.id, email, name: userData.name }),
+      body: JSON.stringify({ 
+        action: 'send-verification', 
+        userId: userData.id, 
+        email, 
+        name: userData.name 
+      }),
     });
   }
 }

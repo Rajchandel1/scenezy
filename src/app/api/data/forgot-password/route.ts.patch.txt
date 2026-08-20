@@ -1,0 +1,16 @@
+ADD THIS AT TOP OF POST FUNCTION IN forgot-password/route.ts:
+
+import { checkRateLimit, getClientIP } from '@/shared/lib/rate-limiter';
+
+export async function POST(req: NextRequest) {
+  const ip = getClientIP(req);
+  
+  if (!checkRateLimit(ip)) {
+    return Response.json(
+      { error: 'Too many requests. Please try again in 1 minute.' }, 
+      { status: 429 }
+    );
+  }
+
+  // ... rest of existing code
+}

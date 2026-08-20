@@ -1,103 +1,128 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { authService, AuthUser } from '@/features/auth';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
+import { StatCardSkeleton, ListRowSkeleton, EmptyState, ErrorState, PageLoading } from '@/shared/components/ui/States';
+import { SearchBar } from '@/shared/components/ui/SearchBar';
+import { FilterTabs } from '@/shared/components/ui/FilterTabs';
+import { useSearchFilter } from '@/shared/hooks/useSearchFilter';
 
-interface Stats {
-  totalUsers: number; totalSellers: number; pendingSellers: number;
-  totalEvents: number; activeEvents: number; pendingEvents: number;
-  totalPasses: number; activePasses: number; usedPasses: number;
-  totalOrders: number; totalRevenue: number;
-  totalEntries: number; entriesToday: number; validEntriesToday: number;
-}
+interface User { id: string; name: string; email: string; role: string; approved?: boolean; suspended?: boolean; createdAt: string; }
 
-export default function AdminDashboard() {
-  const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
+const roleFilters = [
+  { id: 'all', label: 'All Users' },
+  { id: 'USER', label: 'Users' },
+  { id: 'SELLER', label: 'Sellers' },
+  { id: 'ADMIN', label: 'Admins' },
+];
 
-  useEffect(() => {
-    async function load() {
-      const u = await authService.getCurrentUser();
-      if (!u || u.role !== 'ADMIN') { router.push('/sign-in'); return; }
-      setUser(u);
-      const res = await fetch('/api/data/admin?action=stats');
-      setStats(await res.json());
+export default function AdminDashboardPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [usersRes, statsRes] = await Promise.all([
+        fetch('/api/data/admin?action=users'),
+        fetch('/api/data/admin?action=stats')
+      ]);
+      if (!usersRes.ok || !statsRes.ok) throw new Error('Failed to load admin data');
+      setUsers(await usersRes.json());
+      setStats(await statsRes.json());
+    } catch (err) {
+      setError('Could not load dashboard data.');
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, [router]);
+  }, []);
 
-  if (!user || !stats) return <div className="text-neutral-500 text-center pt-20">Loading...</div>;
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const statCards = [
-    { label: 'Users', value: stats.totalUsers, icon: '👥', color: 'text-blue-400' },
-    { label: 'Sellers', value: stats.totalSellers, icon: '🏪', color: 'text-purple-400' },
-    { label: 'Pending Sellers', value: stats.pendingSellers, icon: '⏳', color: 'text-yellow-400' },
-    { label: 'Events', value: stats.totalEvents, icon: '📅', color: 'text-cyan-400' },
-    { label: 'Active Events', value: stats.activeEvents, icon: '🟢', color: 'text-green-400' },
-    { label: 'Pending Events', value: stats.pendingEvents, icon: '⏳', color: 'text-yellow-400' },
-    { label: 'Total Passes', value: stats.totalPasses, icon: '🎫', color: 'text-yellow-400' },
-    { label: 'Active Passes', value: stats.activePasses, icon: '✅', color: 'text-[#c4f000]' },
-    { label: 'Used Passes', value: stats.usedPasses, icon: '✓', color: 'text-neutral-400' },
-    { label: 'Orders', value: stats.totalOrders, icon: '🛒', color: 'text-orange-400' },
-    { label: 'Revenue', value: `₹${stats.totalRevenue}`, icon: '💰', color: 'text-[#c4f000]' },
-    { label: 'Entries Today', value: stats.entriesToday, icon: '📷', color: 'text-pink-400' },
-  ];
+  const {
+    searchQuery, setSearchQuery,
+    activeFilter, setActiveFilter,
+    filteredData, clearFilters, hasActiveFilters,
+    filteredCount, totalCount
+  } = useSearchFilter<User>({
+    data: users,
+    searchFields: ['name', 'email'],
+    filterField: 'role',
+  });
 
-  const navItems = [
-    { href: '/admin/users', label: 'Users', icon: '👥' },
-    { href: '/admin/sellers', label: 'Sellers', icon: '🏪', badge: stats.pendingSellers },
-    { href: '/admin/events', label: 'Events', icon: '📅', badge: stats.pendingEvents },
-    { href: '/admin/passes', label: 'Passes', icon: '🎫' },
-    { href: '/admin/orders', label: 'Orders', icon: '🛒' },
-    { href: '/admin/entries', label: 'Entry Scans', icon: '📷' },
-    { href: '/admin/audit', label: 'Audit Log', icon: '📋' },
-  ];
+  const noResults = !loading && !error && filteredData.length === 0;
+
+  if (loading) return <PageLoading message="Loading admin dashboard..." />;
+  if (error) return <ErrorState message={error} onRetry={loadData} />;
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 pt-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-white text-2xl font-bold">Admin Dashboard</h1>
-          <p className="text-neutral-500 text-sm">Platform control center</p>
-        </div>
-        <button onClick={() => { authService.logout(); router.push('/sign-in'); }} className="text-neutral-500 text-xs border border-neutral-800 px-3 py-1.5 rounded-lg hover:text-red-400 hover:border-red-900/50 transition-all">Logout</button>
+        <h1 className="text-white text-xl font-bold">Admin Dashboard</h1>
       </div>
 
-      {/* Pending Alerts */}
-      {(stats.pendingSellers > 0 || stats.pendingEvents > 0) && (
-        <div className="bg-yellow-950/20 border border-yellow-900/40 rounded-xl p-4 space-y-2">
-          <p className="text-yellow-300 text-sm font-medium">⏳ Pending Approvals</p>
-          {stats.pendingSellers > 0 && <Link href="/admin/sellers" className="block text-yellow-400/80 text-xs hover:text-yellow-300">{stats.pendingSellers} seller(s) waiting for approval →</Link>}
-          {stats.pendingEvents > 0 && <Link href="/admin/events" className="block text-yellow-400/80 text-xs hover:text-yellow-300">{stats.pendingEvents} event(s) waiting for approval →</Link>}
+      {/* Stats Grid */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: 'Total Users', value: stats.totalUsers, color: 'text-[#c4f000]' },
+            { label: 'Pending Sellers', value: stats.pendingSellers, color: 'text-yellow-400' },
+            { label: 'Active Events', value: stats.activeEvents, color: 'text-blue-400' },
+            { label: 'Total Revenue', value: `₹${stats.totalRevenue}`, color: 'text-green-400' },
+          ].map((stat, i) => (
+            <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-xl p-3">
+              <p className="text-neutral-500 text-[10px] uppercase tracking-wider">{stat.label}</p>
+              <p className={`text-lg font-bold mt-1 ${stat.color}`}>{stat.value}</p>
+            </div>
+          ))}
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {statCards.map(s => (
-          <div key={s.label} className="bg-neutral-900 border border-neutral-800 rounded-xl p-3">
-            <span className="text-lg">{s.icon}</span>
-            <p className={`${s.color} font-bold text-xl mt-1`}>{s.value}</p>
-            <p className="text-neutral-500 text-[10px] uppercase tracking-wider mt-0.5">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="space-y-3">
-        <h2 className="text-white font-semibold text-sm">Manage</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {navItems.map(item => (
-            <Link key={item.href} href={item.href} className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-xl p-3 hover:border-[#c4f000]/30 transition-all active:scale-[0.98] relative">
-              <span>{item.icon}</span>
-              <span className="text-neutral-300 text-sm font-medium">{item.label}</span>
-              {item.badge && item.badge > 0 && (
-                <span className="absolute top-2 right-2 w-5 h-5 bg-yellow-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center">{item.badge}</span>
-              )}
-            </Link>
-          ))}
+      {/* Users Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-white font-semibold text-base">Users Management</h2>
+          <span className="text-neutral-500 text-xs">{hasActiveFilters ? `${filteredCount}/${totalCount}` : totalCount} users</span>
         </div>
+
+        <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search by name or email..." />
+        <FilterTabs tabs={roleFilters} activeTab={activeFilter} onTabChange={setActiveFilter} />
+
+        {noResults ? (
+          <EmptyState
+            icon="👥"
+            title={hasActiveFilters ? "No matching users" : "No users found"}
+            description={hasActiveFilters ? "Adjust your search or filters" : "Users will appear here after signup"}
+            actionLabel={hasActiveFilters ? "Clear Filters" : undefined}
+            actionOnClick={hasActiveFilters ? clearFilters : undefined}
+          />
+        ) : (
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden divide-y divide-neutral-800/50">
+            {filteredData.map(user => (
+              <div key={user.id} className="flex items-center gap-3 p-4 hover:bg-neutral-800/30 transition-colors">
+                <div className="w-10 h-10 rounded-full bg-[#c4f000]/10 flex items-center justify-center shrink-0">
+                  <span className="text-[#c4f000] text-sm font-bold">{user.name.charAt(0).toUpperCase()}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{user.name}</p>
+                  <p className="text-neutral-500 text-xs truncate">{user.email}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-neutral-800 text-neutral-400 border border-neutral-700">
+                    {user.role}
+                  </span>
+                  {user.role === 'SELLER' && !user.approved && (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-yellow-950/30 text-yellow-400 border border-yellow-900/50">
+                      Pending
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
