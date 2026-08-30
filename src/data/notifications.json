@@ -10,6 +10,17 @@
       "read": true,
       "createdAt": "2026-08-16T13:30:38.532Z",
       "link": "/passes"
+    },
+    {
+      "id": "notif_1787490905916_pldltt",
+      "userId": "78db4639-0cf8-44ab-b860-0ad30821aff3",
+      "type": "purchase",
+      "title": "Pass Purchased! 🎉",
+      "body": "You got 4 pass(es) for navratri. Show QR at entry!",
+      "icon": "🎫",
+      "read": false,
+      "createdAt": "2026-08-23T13:15:05.916Z",
+      "link": "/passes"
     }
   ]
 }

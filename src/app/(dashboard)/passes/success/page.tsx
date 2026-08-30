@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { PageLoading } from '@/shared/components/ui/States';
 
 function SuccessContent() {
   const router = useRouter();
@@ -10,12 +11,12 @@ function SuccessContent() {
   const orderId = searchParams.get('orderId') || '';
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-5">
+    <div className="min-h-screen app-shell flex items-center justify-center px-5">
       <div className="w-full max-w-[340px] text-center space-y-8">
         {/* Success Animation */}
         <div className="space-y-4">
-          <div className="w-20 h-20 mx-auto rounded-full bg-[#c4f000]/10 border-2 border-[#c4f000] flex items-center justify-center animate-pulse">
-            <svg className="w-10 h-10 text-[#c4f000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-20 h-20 mx-auto rounded-full bg-[#2563eb]/10 border-2 border-[#2563eb] flex items-center justify-center animate-pulse">
+            <svg className="w-10 h-10 text-[#2563eb]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </svg>
           </div>
@@ -29,7 +30,7 @@ function SuccessContent() {
         <div className="space-y-3">
           <Link
             href="/passes"
-            className="block w-full bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] text-center"
+            className="block w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] text-center"
           >
             View My Pass
           </Link>
@@ -49,7 +50,7 @@ function SuccessContent() {
 
 export default function SuccessPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center"><p className="text-neutral-500">Loading...</p></div>}>
+    <Suspense fallback={<PageLoading message="Confirming your booking…" />}>
       <SuccessContent />
     </Suspense>
   );

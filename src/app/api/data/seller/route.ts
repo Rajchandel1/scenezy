@@ -2,13 +2,17 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/db';
 import { events, passes, orders, entries, transfers, users, passTypes } from '@/shared/db/schema';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
+import { requireApiUser } from '@/shared/lib/api-auth';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireApiUser(['SELLER', 'ADMIN']);
+  if (auth.error) return auth.error;
   const { searchParams } = new URL(req.url);
   const action = searchParams.get('action');
   const sellerId = searchParams.get('sellerId');
 
   if (!sellerId) return Response.json({ error: 'sellerId required' }, { status: 400 });
+  if (auth.profile.role !== 'ADMIN' && sellerId !== auth.profile.id) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   const sellerEvents = await db.select().from(events).where(eq(events.sellerId, sellerId));
   const sellerEventIds = sellerEvents.map(e => e.id);
@@ -20,9 +24,12 @@ export async function GET(req: NextRequest) {
     return Response.json({});
   }
 
-  const sellerPasses = await db.select().from(passes).where(inArray(passes.eventId, sellerEventIds));
-  const sellerOrders = await db.select().from(orders).where(inArray(orders.eventId, sellerEventIds));
-  const sellerEntries = await db.select().from(entries).where(inArray(entries.eventId, sellerEventIds));
+  const [sellerPasses,sellerOrders,sellerEntries,sellerPassTypes]=await Promise.all([
+    db.select().from(passes).where(inArray(passes.eventId,sellerEventIds)),
+    db.select().from(orders).where(inArray(orders.eventId,sellerEventIds)),
+    db.select().from(entries).where(inArray(entries.eventId,sellerEventIds)),
+    db.select().from(passTypes).where(inArray(passTypes.eventId,sellerEventIds)),
+  ]);
 
   const now = new Date();
 
@@ -45,6 +52,12 @@ export async function GET(req: NextRequest) {
     sellerPasses.forEach(p => { passTypeSales[p.passTypeName] = (passTypeSales[p.passTypeName] || 0) + 1; });
     const bestPassType = Object.entries(passTypeSales).sort((a, b) => b[1] - a[1])[0];
 
+    const enrichedEvents=sellerEvents.map(event=>{
+      const pts=sellerPassTypes.filter(type=>type.eventId===event.id);
+      const totalCapacity=pts.reduce((sum,type)=>sum+type.available+type.sold,0);
+      const totalSold=pts.reduce((sum,type)=>sum+type.sold,0);
+      return {...event,passes:pts,totalSold,totalCapacity,revenue:sellerOrders.filter(order=>order.eventId===event.id).reduce((sum,order)=>sum+(order.total||0),0),checkedIn:sellerEntries.filter(entry=>entry.eventId===event.id&&entry.result==='VALID').length,sellPercentage:totalCapacity?Math.round(totalSold/totalCapacity*100):0};
+    }).sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime());
     return Response.json({
       overview: {
         totalRevenue, monthRevenue,
@@ -58,6 +71,7 @@ export async function GET(req: NextRequest) {
       },
       bestEvent: bestEvent ? { title: bestEvent.title, sold: eventSales[bestEventId] } : null,
       bestPassType: bestPassType ? { name: bestPassType[0], sold: bestPassType[1] } : null,
+      events:enrichedEvents,
     });
   }
 
@@ -68,11 +82,11 @@ export async function GET(req: NextRequest) {
     else if (tab === 'past') filtered = sellerEvents.filter(e => new Date(e.date) < now || e.status === 'CANCELLED');
     else if (tab === 'pending') filtered = sellerEvents.filter(e => e.status === 'PENDING_APPROVAL');
 
-    const enriched = await Promise.all(filtered.map(async (event) => {
+    const enriched = filtered.map((event) => {
       const evtPasses = sellerPasses.filter(p => p.eventId === event.id);
       const evtOrders = sellerOrders.filter(o => o.eventId === event.id);
       const evtEntries = sellerEntries.filter(e => e.eventId === event.id && e.result === 'VALID');
-      const pts = await db.select().from(passTypes).where(eq(passTypes.eventId, event.id));
+      const pts=sellerPassTypes.filter(type=>type.eventId===event.id);
       const totalCap = pts.reduce((s, p) => s + p.available + p.sold, 0);
       const sold = pts.reduce((s, p) => s + p.sold, 0);
       return {
@@ -82,7 +96,7 @@ export async function GET(req: NextRequest) {
         checkedIn: evtEntries.length,
         sellPercentage: totalCap > 0 ? Math.round((sold / totalCap) * 100) : 0,
       };
-    }));
+    });
 
     return Response.json(enriched.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   }
@@ -97,7 +111,7 @@ export async function GET(req: NextRequest) {
     const evtPasses = sellerPasses.filter(p => p.eventId === eventId);
     const evtOrders = sellerOrders.filter(o => o.eventId === eventId);
     const evtEntries = sellerEntries.filter(e => e.eventId === eventId);
-    const pts = await db.select().from(passTypes).where(eq(passTypes.eventId, eventId));
+    const pts=sellerPassTypes.filter(type=>type.eventId===eventId);
 
     const passBreakdown = pts.map(pt => {
       const typePasses = evtPasses.filter(p => p.passTypeId === pt.id);

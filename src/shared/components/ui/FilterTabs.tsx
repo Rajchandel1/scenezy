@@ -22,8 +22,8 @@ export function FilterTabs({ tabs, activeTab, onTabChange, className = '' }: Fil
           onClick={() => onTabChange(tab.id)}
           className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1.5 ${
             activeTab === tab.id
-              ? 'bg-[#c4f000] text-black shadow-lg shadow-[#c4f000]/20'
-              : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:border-neutral-700'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+              : 'app-surface text-neutral-400 hover:border-blue-400/30'
           }`}
         >
           {tab.label}

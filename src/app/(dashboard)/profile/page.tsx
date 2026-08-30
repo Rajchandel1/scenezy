@@ -1,111 +1,27 @@
 'use client';
-
-import { useRouter } from 'next/navigation';
-import { authService, AuthUser } from '@/features/auth';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { CalendarDays, ChevronRight, Download, Monitor, Moon, QrCode, Sun, Ticket, UserRound } from 'lucide-react';
+import { authService, type AuthUser } from '@/features/auth';
 import { usePWAInstall } from '@/shared/lib/use-pwa';
+import { useTheme, type ThemePreference } from '@/shared/components/theme/ThemeProvider';
+import { LoadingButton } from '@/shared/components/ui/LoadingButton';
+import { Skeleton } from '@/shared/components/ui/States';
 
-export default function ProfilePage() {
-  const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const { canInstall, isInstalled, install } = usePWAInstall();
-  const [showIOSHint, setShowIOSHint] = useState(false);
-
-  useEffect(() => {
-    authService.getCurrentUser().then(setUser);
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS) setShowIOSHint(true);
-  }, []);
-
-  const handleLogout = async () => {
-    await authService.logout();
-    router.push('/');
-    router.refresh();
-  };
-
-  const handleInstall = async () => {
-    if (canInstall) await install();
-    else setShowIOSHint(true);
-  };
-
-  return (
-    <div className="px-4 pt-6 space-y-6">
-      <div><h1 className="text-white text-xl font-bold">Profile</h1></div>
-
-      {/* User Card */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-[#c4f000] flex items-center justify-center">
-            <span className="text-black font-bold text-lg">{user?.name?.[0] || '?'}</span>
-          </div>
-          <div>
-            <p className="text-white font-semibold">{user?.name || 'Loading...'}</p>
-            <p className="text-neutral-500 text-xs">{user?.email || ''}</p>
-          </div>
-        </div>
-        <div className="flex gap-2 pt-1">
-          <span className="text-[10px] uppercase tracking-wider bg-neutral-800 text-neutral-400 px-2.5 py-1 rounded-lg font-medium">{user?.role || 'USER'}</span>
-        </div>
-      </div>
-
-      {/* 🔥 INSTALL APP - Highlighted Section */}
-      {!isInstalled && (
-        <div className="bg-gradient-to-br from-[#c4f000]/10 to-neutral-900 border border-[#c4f000]/30 rounded-2xl p-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#c4f000] rounded-xl flex items-center justify-center shrink-0">
-              <span className="text-black font-black text-sm">P</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-white font-semibold text-sm">Install Scenezy App</p>
-              <p className="text-neutral-400 text-[11px]">Quick access from your home screen</p>
-            </div>
-          </div>
-          
-          <button onClick={handleInstall}
-            className="w-full bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold py-3 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Install Now
-          </button>
-
-          {showIOSHint && !canInstall && (
-            <p className="text-neutral-500 text-[10px] leading-relaxed">
-              On iPhone: Tap Share → "Add to Home Screen"
-            </p>
-          )}
-        </div>
-      )}
-
-      {isInstalled && (
-        <div className="bg-green-950/20 border border-green-900/30 rounded-xl p-3 flex items-center gap-2">
-          <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-          <span className="text-green-400 text-xs font-medium">App installed</span>
-        </div>
-      )}
-
-      {/* Menu Items */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden">
-        <Link href="/scanner" className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-neutral-800/50 transition-colors border-b border-neutral-800">
-          <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
-          <span className="text-neutral-300 text-sm">QR Scanner</span>
-        </Link>
-        {[
-          { label: 'Booking History', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-          { label: 'Notifications', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
-          { label: 'Help & Support', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-        ].map((item, i) => (
-          <button key={i} className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-neutral-800/50 transition-colors border-b border-neutral-800 last:border-0">
-            <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={item.icon} /></svg>
-            <span className="text-neutral-300 text-sm">{item.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <button onClick={handleLogout} className="w-full bg-neutral-900 border border-red-900/30 text-red-400 font-medium py-3.5 rounded-xl transition-all active:scale-[0.98]">
-        Logout
-      </button>
-
-      <p className="text-center text-neutral-700 text-[10px]">Scenezy v0.3.0 · Paper Plane UX</p>
-    </div>
-  );
+export default function ProfilePage(){
+  const router=useRouter(),[user,setUser]=useState<AuthUser|null>(null),[loggingOut,setLoggingOut]=useState(false);
+  const [stats,setStats]=useState({passes:0,active:0,bookings:0});
+  const {theme,setTheme}=useTheme(),{canInstall,isInstalled,install}=usePWAInstall();
+  useEffect(()=>{authService.getCurrentUser().then(async account=>{setUser(account);if(!account)return;const [passesResponse,ordersResponse]=await Promise.all([fetch(`/api/data/passes?userId=${account.id}`),fetch(`/api/data/orders?userId=${account.id}`)]);const passes=passesResponse.ok?await passesResponse.json():[],orders=ordersResponse.ok?await ordersResponse.json():[];setStats({passes:passes.length,active:passes.filter((pass:{status:string})=>pass.status==='ACTIVE').length,bookings:orders.length});});},[]);
+  const logout=async()=>{setLoggingOut(true);await authService.logout();router.replace('/');router.refresh();};
+  const links=user?.role==='SELLER'?[['/seller/events','Manage events',CalendarDays],['/scanner','Entry scanner',QrCode]] as const:user?.role==='ADMIN'?[['/admin','Admin office',UserRound],['/scanner','Entry scanner',QrCode]] as const:[['/passes','My passes',Ticket]] as const;
+  return <div className="px-5 sm:px-6 pt-7 pb-8 space-y-8"><header><p className="eyebrow">Account</p><h1 className="display-serif text-white text-4xl mt-1">Your profile</h1></header>
+    <section className="editorial-card p-6 text-center">{user?<><div className="w-20 h-20 rounded-full brand-button grid place-items-center display-serif text-3xl uppercase mx-auto ring-4 ring-[var(--surface)]">{user.name[0]}</div><p className="display-serif text-3xl text-white mt-4">{user.name}</p><p className="muted text-xs mt-1">{user.email}</p><div className="grid grid-cols-3 divide-x divide-[var(--line)] mt-6"><div><p className="display-serif text-2xl text-white">{stats.passes}</p><p className="eyebrow mt-1">Passes</p></div><div><p className="display-serif text-2xl text-white">{stats.active}</p><p className="eyebrow mt-1">Active</p></div><div><p className="display-serif text-2xl text-white">{stats.bookings}</p><p className="eyebrow mt-1">Bookings</p></div></div></>:<><Skeleton className="w-20 h-20 rounded-full mx-auto"/><Skeleton className="h-7 w-1/2 mx-auto mt-4"/><Skeleton className="h-3 w-2/3 mx-auto mt-2"/></>}</section>
+    {user?.role==='USER'&&<section className="rounded-2xl bg-[#172554] text-white p-5 flex items-center justify-between gap-4"><div><p className="text-[10px] uppercase tracking-[.18em] text-blue-300">Your wallet</p><p className="display-serif text-xl mt-2">{stats.active} active pass{stats.active===1?'':'es'}</p><p className="text-white/55 text-xs mt-1">Ready whenever you are.</p></div><Link href="/explore" className="rounded-full bg-[#3158d4] px-4 py-2.5 text-xs font-semibold">Explore</Link></section>}
+    <section className="space-y-3"><div><p className="eyebrow">Appearance</p><h2 className="display-serif text-xl text-white mt-1">Make it yours</h2></div><div className="editorial-card p-1.5 grid grid-cols-3 gap-1">{([['light','Light',Sun],['dark','Dark',Moon],['system','Auto',Monitor]] as [ThemePreference,string,typeof Sun][]).map(([value,label,Icon])=><button key={value} onClick={()=>setTheme(value)} className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-semibold transition ${theme===value?'brand-button':'muted hover:bg-[var(--soft)]'}`}><Icon size={16}/>{label}</button>)}</div></section>
+    <section className="space-y-3"><p className="eyebrow">Shortcuts</p><div className="editorial-card overflow-hidden divide-y divide-[var(--line)]">{links?.map(([href,label,Icon])=><Link href={href} key={href} className="flex items-center gap-3 p-4 hover:bg-[var(--soft)] transition"><span className="w-10 h-10 rounded-xl bg-[var(--soft)] text-[var(--terra)] grid place-items-center"><Icon size={18}/></span><span className="flex-1 text-sm font-semibold text-white">{label}</span><ChevronRight size={16} className="muted"/></Link>)}</div></section>
+    {!isInstalled&&<section className="editorial-card p-5 flex items-center gap-4"><span className="w-11 h-11 rounded-xl brand-button grid place-items-center"><Download size={18}/></span><div className="flex-1"><p className="text-sm font-semibold text-white">Install Scenezy</p><p className="muted text-xs mt-1">Faster access from your home screen.</p></div><button onClick={()=>canInstall?install():undefined} disabled={!canInstall} className="rounded-full border border-[var(--line)] px-4 py-2 text-xs font-semibold disabled:opacity-45">Install</button></section>}
+    <LoadingButton loading={loggingOut} loadingLabel="Signing out…" onClick={logout} className="w-full rounded-full border border-red-500/25 text-red-400 py-3.5 text-sm font-semibold">Sign out</LoadingButton><p className="text-center muted text-[10px]">Scenezy · Version 0.4</p>
+  </div>;
 }

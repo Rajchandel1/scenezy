@@ -1,95 +1,29 @@
 'use client';
-
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { ArrowLeft, ArrowRight, Heart, MapPin, Minus, Plus, Share2 } from 'lucide-react';
+import { LoadingButton } from '@/shared/components/ui/LoadingButton';
+import { Skeleton } from '@/shared/components/ui/States';
 
-interface PassType { id: string; name: string; price: number; benefits: string; available: number; sold: number; transferAllowed: boolean; }
-interface Event { id: string; title: string; description: string; date: string; time: string; location: string; venue: string; category: string; passes: PassType[]; }
+interface PassType { id:string;name:string;price:number;benefits:string;available:number;sold:number }
+interface Event { id:string;title:string;description:string;date:string;time:string;location:string;venue:string;category:string;sellerName:string;posterUrl?:string|null;passes:PassType[] }
 
-export default function EventDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const [event, setEvent] = useState<Event | null>(null);
-  const [selectedPass, setSelectedPass] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/data/events')
-      .then(r => r.json())
-      .then(data => { setEvent(data.find((e: Event) => e.id === params.id) || null); setLoaded(true); })
-      .catch(() => setLoaded(true));
-  }, [params.id]);
-
-  if (!loaded) return <div className="px-4 pt-6"><p className="text-neutral-500">Loading...</p></div>;
-  if (!event) return <div className="px-4 pt-6 text-center"><p className="text-neutral-500">Event not found</p><button onClick={() => router.back()} className="text-[#c4f000] text-sm mt-2">Go back</button></div>;
-
-  const dateObj = new Date(event.date);
-  const dateStr = dateObj.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const selected = event.passes.find(p => p.id === selectedPass);
-  const total = selected ? selected.price * quantity : 0;
-
-  const handleGetPass = () => {
-    if (!selectedPass) return;
-    router.push(`/checkout?eventId=${event.id}&passTypeId=${selectedPass}&quantity=${quantity}`);
-  };
-
-  return (
-    <div className="pb-24">
-      <div className="h-48 bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center relative">
-        <span className="text-neutral-600 text-sm">{event.category}</span>
-        <button onClick={() => router.back()} className="absolute top-4 left-4 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        </button>
-      </div>
-      <div className="px-4 pt-5 space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-white text-xl font-bold">{event.title}</h1>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
-            <span className="flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>{dateStr} · {event.time}</span>
-            <span className="flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>{event.venue}, {event.location}</span>
-          </div>
-        </div>
-        <p className="text-neutral-400 text-sm leading-relaxed">{event.description}</p>
-        <div className="space-y-3">
-          <h2 className="text-white font-semibold text-sm">Select Pass</h2>
-          <div className="space-y-2">
-            {event.passes.map(pass => (
-              <button key={pass.id} onClick={() => setSelectedPass(pass.id)}
-                className={`w-full text-left p-4 rounded-xl border transition-all ${selectedPass === pass.id ? 'border-[#c4f000] bg-[#c4f000]/5' : 'border-neutral-800 bg-neutral-900'}`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`font-semibold text-sm ${selectedPass === pass.id ? 'text-[#c4f000]' : 'text-white'}`}>{pass.name}</p>
-                    <p className="text-neutral-500 text-xs mt-0.5">{pass.benefits}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white font-bold">₹{pass.price}</p>
-                    <p className="text-neutral-600 text-[10px]">{pass.available} left</p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-        {selectedPass && (
-          <div className="flex items-center justify-between bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-            <span className="text-neutral-400 text-sm">Quantity</span>
-            <div className="flex items-center gap-4">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 rounded-lg bg-neutral-800 text-white flex items-center justify-center text-lg">−</button>
-              <span className="text-white font-bold w-4 text-center">{quantity}</span>
-              <button onClick={() => setQuantity(Math.min(10, quantity + 1))} className="w-8 h-8 rounded-lg bg-neutral-800 text-white flex items-center justify-center text-lg">+</button>
-            </div>
-          </div>
-        )}
-      </div>
-      {selectedPass && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-neutral-800 p-4 z-40">
-          <div className="max-w-lg mx-auto flex items-center justify-between">
-            <div><p className="text-neutral-500 text-xs">Total</p><p className="text-white font-bold text-lg">₹{total}</p></div>
-            <button onClick={handleGetPass} className="bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold px-8 py-3.5 rounded-xl transition-all active:scale-[0.98]">GET PASS</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+export default function EventDetailPage(){
+  const {id}=useParams<{id:string}>(),router=useRouter();
+  const [event,setEvent]=useState<Event|null>(null),[loaded,setLoaded]=useState(false),[selected,setSelected]=useState(''),[quantity,setQuantity]=useState(1),[liked,setLiked]=useState(false),[moving,setMoving]=useState(false);
+  useEffect(()=>{fetch(`/api/data/events?id=${encodeURIComponent(id)}`).then(async response=>{if(!response.ok)throw new Error();const found:Event|null=await response.json();setEvent(found);if(found?.passes[0])setSelected(found.passes[0].id);}).finally(()=>setLoaded(true));},[id]);
+  if(!loaded)return <div className="min-h-screen"><Skeleton className="h-[32vh] min-h-[250px] rounded-none"/><div className="-mt-8 relative surface rounded-t-[2rem] p-6 space-y-5"><Skeleton className="h-8 w-2/3"/><Skeleton className="h-20"/><Skeleton className="h-16"/></div></div>;
+  if(!event)return <div className="min-h-[70vh] grid place-items-center text-center"><div><p className="muted">Event not found.</p><button onClick={()=>router.back()} className="text-blue-500 text-sm mt-2">Go back</button></div></div>;
+  const pass=event.passes.find(item=>item.id===selected),total=(pass?.price||0)*quantity,date=new Date(event.date),soldOut=!pass||pass.available<quantity;
+  const buy=()=>{if(!pass)return;setMoving(true);router.push(`/checkout?eventId=${event.id}&passTypeId=${pass.id}&quantity=${quantity}`);};
+  const share=async()=>{if(navigator.share)await navigator.share({title:event.title,url:location.href});else await navigator.clipboard.writeText(location.href);};
+  return <div className="min-h-screen pb-48">
+    <section className="relative h-[32vh] min-h-[250px] max-h-[310px] overflow-hidden bg-gradient-to-br from-amber-300 via-orange-700 to-slate-950" style={event.posterUrl?{backgroundImage:`linear-gradient(to top,rgba(0,0,0,.82),rgba(0,0,0,.05)),url(${event.posterUrl})`,backgroundSize:'cover',backgroundPosition:'center'}:undefined}><div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/15"/><div className="absolute -right-20 top-16 w-72 h-72 border-[34px] border-white/10 rounded-full"/><div className="absolute top-4 left-5 right-5 flex justify-between"><button onClick={()=>router.back()} className="w-10 h-10 rounded-full bg-white/20 border border-white/25 backdrop-blur grid place-items-center text-white"><ArrowLeft size={18}/></button><div className="flex gap-2"><button onClick={()=>setLiked(!liked)} className="w-10 h-10 rounded-full bg-white/20 border border-white/25 backdrop-blur grid place-items-center text-white"><Heart size={18} fill={liked?'currentColor':'none'}/></button><button onClick={share} className="w-10 h-10 rounded-full bg-white/20 border border-white/25 backdrop-blur grid place-items-center text-white"><Share2 size={18}/></button></div></div><div className="absolute bottom-11 left-5 right-5 text-white"><span className="inline-flex rounded-full border border-white/25 bg-white/15 backdrop-blur px-3 py-1 text-[9px] font-bold uppercase tracking-[.16em]">{event.category}</span><h1 className="display-serif text-[2.15rem] leading-[.92] mt-3 max-w-sm">{event.title}</h1><div className="flex items-center gap-2.5 text-white/70 text-[11px] mt-2 min-w-0"><span className="shrink-0">Hosted by <strong className="font-semibold text-white/90">{event.sellerName}</strong></span><span className="w-px h-3 bg-white/30"/><span className="inline-flex items-center gap-1 min-w-0"><MapPin size={11} className="shrink-0"/><span className="truncate">{event.venue}, {event.location}</span></span></div></div></section>
+    <section className="relative -mt-8 rounded-t-[2.15rem] bg-[var(--canvas)] border-t border-[var(--line)] px-5 sm:px-6 pt-8 pb-6 space-y-7"><div className="w-12 h-1 rounded-full bg-[var(--line)] absolute top-3 left-1/2 -translate-x-1/2"/>
+      <div className="grid grid-cols-2 divide-x divide-[var(--line)]"><div className="pr-5"><p className="eyebrow">Date</p><p className="display-serif text-xl text-[var(--ink)] mt-2">{date.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</p><p className="muted text-[10px]">{date.toLocaleDateString('en-IN',{weekday:'long'})}</p></div><div className="pl-5"><p className="eyebrow">Time</p><p className="display-serif text-xl text-[var(--ink)] mt-2">{event.time}</p><p className="muted text-[10px]">Doors may vary</p></div></div>
+      <div className="border-t border-[var(--line)] pt-5"><p className="text-sm leading-7 muted">{event.description||`Join us at ${event.venue} for ${event.title}. Your Scenezy pass contains everything you need for entry.`}</p></div>
+      <div><div className="flex items-baseline justify-between mb-3"><h2 className="display-serif text-xl text-white">Choose your pass</h2><span className="eyebrow">{event.passes.length} options</span></div><div className="space-y-2">{event.passes.map(item=><button key={item.id} onClick={()=>{setSelected(item.id);setQuantity(1);}} className={`w-full p-4 rounded-2xl text-left border transition ${selected===item.id?'border-blue-500 bg-blue-500/10':'editorial-card'}`}><div className="flex justify-between gap-4"><div><p className="text-sm font-semibold text-white">{item.name}</p><p className="muted text-xs mt-1">{item.benefits||'Event entry'}</p></div><div className="text-right"><p className="display-serif text-xl text-white">₹{item.price}</p><p className="muted text-[10px]">{item.available} left</p></div></div></button>)}</div></div>
+    </section>
+    {pass&&<div className="app-nav fixed bottom-20 left-0 right-0 border-t px-4 py-3 z-40"><div className="max-w-xl mx-auto flex items-center gap-2"><div className="shrink-0"><p className="eyebrow">Total</p><p className="display-serif text-[1.65rem] leading-none text-[var(--ink)] mt-1">₹{total}</p></div><div className="ml-auto flex items-center rounded-full border border-[var(--line)] bg-[var(--soft)] p-1"><button type="button" aria-label="Decrease quantity" onClick={()=>setQuantity(Math.max(1,quantity-1))} disabled={quantity===1} className="w-7 h-8 rounded-full grid place-items-center disabled:opacity-30"><Minus size={13}/></button><span className="w-5 text-center text-sm font-bold" aria-label={`Quantity ${quantity}`}>{quantity}</span><button type="button" aria-label="Increase quantity" onClick={()=>setQuantity(Math.min(10,pass.available,quantity+1))} disabled={quantity>=Math.min(10,pass.available)} className="w-7 h-8 rounded-full grid place-items-center disabled:opacity-30"><Plus size={13}/></button></div><LoadingButton loading={moving} loadingLabel="Opening…" disabled={soldOut} onClick={buy} className="brand-button rounded-full px-4 py-3.5 text-sm font-semibold shrink-0">{soldOut?'Sold out':<>Book pass <ArrowRight size={14}/></>}</LoadingButton></div></div>}
+  </div>;
 }

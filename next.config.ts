@@ -3,18 +3,20 @@ import withPWAInit from '@ducanh2912/next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
-  swcMinify: true,
-  disable: process.env.NODE_ENV === 'development', // Disable in dev for faster HMR
+  // ✅ REMOVED: swcMinify (deprecated in Next.js 16)
+  disable: process.env.NODE_ENV === 'development', 
 });
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['lh3.googleusercontent.com'], // For Google OAuth avatars
+    remotePatterns: [{ protocol: 'https', hostname: 'lh3.googleusercontent.com' }],
   },
+  // ✅ FIX: Explicit empty turbopack config to silence webpack warning
+  turbopack: {},
 };
 
 export default withPWA(nextConfig);

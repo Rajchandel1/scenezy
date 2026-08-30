@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { authService, AuthUser } from '@/features/auth';
 import { PassService, Pass } from '@/features/passes';
 import { TransferService, Transfer } from '@/features/transfers';
+import { PageLoading } from '@/shared/components/ui/States';
 
 export default function TransferPage() {
   const params = useParams();
@@ -79,24 +80,20 @@ export default function TransferPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <p className="text-neutral-500">Loading...</p>
-      </div>
-    );
+    return <PageLoading message="Opening transfer…" />;
   }
 
   if (!pass) {
     return (
       <div className="px-4 pt-6 text-center">
         <p className="text-neutral-500">Pass not found</p>
-        <button onClick={() => router.back()} className="text-[#c4f000] text-sm mt-2">Go back</button>
+        <button onClick={() => router.back()} className="text-[#2563eb] text-sm mt-2">Go back</button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] px-4 py-6">
+    <div className="min-h-screen app-shell px-4 py-6">
       <div className="max-w-[340px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -108,7 +105,7 @@ export default function TransferPage() {
 
         {/* Pass Info */}
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-2">
-          <p className="text-[#c4f000] text-xs font-medium uppercase tracking-wider">{pass.passTypeName}</p>
+          <p className="text-[#2563eb] text-xs font-medium uppercase tracking-wider">{pass.passTypeName}</p>
           <p className="text-white font-semibold">{pass.eventTitle}</p>
           <p className="text-neutral-500 text-xs">{new Date(pass.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {pass.eventTime}</p>
         </div>
@@ -117,8 +114,8 @@ export default function TransferPage() {
           /* STEP 1: Enter recipient email/phone */
           <div className="space-y-4">
             <div className="text-center space-y-2 py-2">
-              <div className="w-14 h-14 mx-auto rounded-full bg-[#c4f000]/10 flex items-center justify-center">
-                <svg className="w-7 h-7 text-[#c4f000]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+              <div className="w-14 h-14 mx-auto rounded-full bg-[#2563eb]/10 flex items-center justify-center">
+                <svg className="w-7 h-7 text-[#2563eb]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
               </div>
               <p className="text-white font-medium text-sm">Who should receive this pass?</p>
               <p className="text-neutral-500 text-xs">Enter their email. They'll see it in their Passes tab.</p>
@@ -131,7 +128,7 @@ export default function TransferPage() {
                 value={recipient}
                 onChange={e => setRecipient(e.target.value)}
                 placeholder="friend@example.com"
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] focus:ring-1 focus:ring-[#c4f000] transition-all"
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] transition-all"
               />
             </div>
 
@@ -142,7 +139,7 @@ export default function TransferPage() {
             <button
               onClick={handleSend}
               disabled={sending || !recipient.trim()}
-              className="w-full bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {sending ? 'Sending...' : 'Send Pass'}
             </button>
@@ -160,8 +157,8 @@ export default function TransferPage() {
           /* STEP 2: Transfer sent confirmation */
           <div className="space-y-4">
             <div className="text-center space-y-3 py-3">
-              <div className="w-14 h-14 mx-auto rounded-full bg-[#c4f000]/10 border border-[#c4f000]/30 flex items-center justify-center">
-                <svg className="w-7 h-7 text-[#c4f000]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              <div className="w-14 h-14 mx-auto rounded-full bg-[#2563eb]/10 border border-[#2563eb]/30 flex items-center justify-center">
+                <svg className="w-7 h-7 text-[#2563eb]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
               </div>
               <div>
                 <p className="text-white font-bold">Pass sent ✓</p>

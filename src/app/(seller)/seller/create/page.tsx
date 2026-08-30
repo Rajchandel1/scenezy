@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/features/auth';
 import { SellerService } from '@/features/seller';
+import { LoadingButton } from '@/shared/components/ui/LoadingButton';
+import { ImagePlus, X } from 'lucide-react';
 
-const CATEGORIES = ['Party', 'Music', 'Conference', 'Comedy', 'Business', 'Sports', 'Workshop', 'Other'];
+const FALLBACK_CATEGORIES = ['Party', 'Music', 'Conference', 'Comedy', 'Business', 'Sports', 'Workshop', 'Other'];
 
 interface PassInput { name: string; price: number; benefits: string; available: number; transferAllowed: boolean; }
 
@@ -15,11 +17,15 @@ export default function CreateEventPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState(false);
+  const [categories,setCategories]=useState(FALLBACK_CATEGORIES);
+  const [posterFile,setPosterFile]=useState<File|null>(null),[posterPreview,setPosterPreview]=useState('');
 
   const [form, setForm] = useState({
-    title: '', description: '', date: '', time: '', location: '', venue: '', category: 'Party',
+    title: '', description: '', posterUrl: '', date: '', time: '', location: '', venue: '', category: 'Party',
     passes: [{ name: 'General', price: 499, benefits: 'Standard entry', available: 100, transferAllowed: true }] as PassInput[],
   });
+
+  useEffect(()=>{fetch('/api/data/content').then(response=>response.ok?response.json():null).then(data=>{const names=data?.categories?.map((item:{name:string})=>item.name);if(names?.length){setCategories(names);setForm(current=>names.includes(current.category)?current:{...current,category:names[0]});}}).catch(()=>undefined);},[]);
 
   const addPassType = () => {
     setForm({ ...form, passes: [...form.passes, { name: '', price: 0, benefits: '', available: 100, transferAllowed: true }] });
@@ -42,20 +48,41 @@ export default function CreateEventPage() {
     setLoading(true);
     setError('');
 
+    let uploadedPath='';
     try {
+      let posterUrl=form.posterUrl;
+      if(posterFile){
+        const uploadBody=new FormData();uploadBody.append('file',posterFile);
+        const upload=await fetch('/api/data/uploads/event-poster',{method:'POST',body:uploadBody});
+        const uploaded=await upload.json();
+        if(!upload.ok)throw new Error(uploaded.error||'Poster upload failed');
+        posterUrl=uploaded.url;uploadedPath=uploaded.path;
+      }
       await SellerService.createEvent({
         ...form,
+        posterUrl,
         sellerId: user.id,
         sellerName: user.name,
         passes: form.passes.filter(p => p.name && p.price > 0),
       });
       setCreated(true);
     } catch (err) {
+      if(uploadedPath)fetch('/api/data/uploads/event-poster',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:uploadedPath})}).catch(()=>undefined);
       setError(err instanceof Error ? err.message : 'Failed to create event');
     } finally {
       setLoading(false);
     }
   };
+
+  const choosePoster=(file?:File)=>{
+    setError('');
+    if(!file)return;
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)){setError('Choose a JPG, PNG or WebP image.');return;}
+    if(file.size>6*1024*1024){setError('Poster must be smaller than 6 MB.');return;}
+    if(posterPreview)URL.revokeObjectURL(posterPreview);
+    setPosterFile(file);setPosterPreview(URL.createObjectURL(file));setForm(current=>({...current,posterUrl:''}));
+  };
+  const removePoster=()=>{if(posterPreview)URL.revokeObjectURL(posterPreview);setPosterFile(null);setPosterPreview('');setForm(current=>({...current,posterUrl:''}));};
 
   const canProceed = () => {
     if (step === 1) return form.title.trim().length > 0;
@@ -78,8 +105,8 @@ export default function CreateEventPage() {
             <p className="text-neutral-400 text-sm">Your event is pending admin approval. It will appear in Explore once approved.</p>
           </div>
           <div className="space-y-2">
-            <button onClick={() => router.push('/seller')} className="w-full bg-[#c4f000] text-black font-bold py-3 rounded-xl active:scale-[0.98] transition-all">Back to Dashboard</button>
-            <button onClick={() => { setCreated(false); setStep(1); setForm({ title: '', description: '', date: '', time: '', location: '', venue: '', category: 'Party', passes: [{ name: 'General', price: 499, benefits: 'Standard entry', available: 100, transferAllowed: true }] }); }} className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 font-medium py-3 rounded-xl active:scale-[0.98] transition-all">Create Another</button>
+            <button onClick={() => router.push('/seller')} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl active:scale-[0.98] transition-all">Back to Dashboard</button>
+            <button onClick={() => { removePoster(); setCreated(false); setStep(1); setForm({ title: '', description: '', posterUrl: '', date: '', time: '', location: '', venue: '', category: 'Party', passes: [{ name: 'General', price: 499, benefits: 'Standard entry', available: 100, transferAllowed: true }] }); }} className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 font-medium py-3 rounded-xl active:scale-[0.98] transition-all">Create Another</button>
           </div>
         </div>
       </div>
@@ -97,7 +124,7 @@ export default function CreateEventPage() {
 
       <div className="flex gap-1.5">
         {[1, 2, 3, 4, 5].map(s => (
-          <div key={s} className={`h-1.5 flex-1 rounded-full transition-all ${s <= step ? 'bg-[#c4f000]' : 'bg-neutral-800'}`} />
+          <div key={s} className={`h-1.5 flex-1 rounded-full transition-all ${s <= step ? 'bg-[#2563eb]' : 'bg-neutral-800'}`} />
         ))}
       </div>
       <p className="text-neutral-500 text-xs text-center">Step {step} of 5</p>
@@ -109,22 +136,23 @@ export default function CreateEventPage() {
             <div className="space-y-1.5">
               <label className="text-neutral-400 text-xs uppercase tracking-wider">Event Name</label>
               <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="College Night 2026"
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] transition-all" />
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] transition-all" />
             </div>
             <div className="space-y-1.5">
               <label className="text-neutral-400 text-xs uppercase tracking-wider">Description</label>
               <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Tell people what to expect..." rows={3}
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] transition-all resize-none" />
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] transition-all resize-none" />
             </div>
             <div className="space-y-1.5">
               <label className="text-neutral-400 text-xs uppercase tracking-wider">Category</label>
               <div className="flex flex-wrap gap-2">
-                {CATEGORIES.map(cat => (
+                {categories.map(cat => (
                   <button key={cat} type="button" onClick={() => setForm({ ...form, category: cat })}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${form.category === cat ? 'bg-[#c4f000] text-black' : 'bg-neutral-900 text-neutral-400 border border-neutral-800'}`}>{cat}</button>
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${form.category === cat ? 'bg-blue-600 text-white' : 'bg-neutral-900 text-neutral-400 border border-neutral-800'}`}>{cat}</button>
                 ))}
               </div>
             </div>
+            <div className="space-y-1.5"><label className="text-neutral-400 text-xs uppercase tracking-wider">Event poster</label>{posterPreview?<div className="relative h-48 rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900"><div className="absolute inset-0 bg-cover bg-center" style={{backgroundImage:`url(${posterPreview})`}}/><div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent"/><div className="absolute left-4 bottom-3 text-white"><p className="text-xs font-semibold truncate max-w-56">{posterFile?.name}</p><p className="text-[10px] text-white/60">{posterFile?(posterFile.size/1024/1024).toFixed(1):0} MB · Ready to upload</p></div><button type="button" onClick={removePoster} className="absolute right-3 top-3 w-9 h-9 rounded-full bg-black/60 text-white grid place-items-center"><X size={16}/></button></div>:<label className="h-40 rounded-2xl border border-dashed border-neutral-700 bg-neutral-900/60 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-500 transition"><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={event=>choosePoster(event.target.files?.[0])}/><span className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-400 grid place-items-center"><ImagePlus size={20}/></span><span className="text-sm text-white font-semibold mt-3">Choose poster image</span><span className="text-[10px] text-neutral-500 mt-1">JPG, PNG or WebP · Max 6 MB</span></label>}<p className="text-neutral-600 text-[10px]">Recommended portrait or 4:5 artwork, at least 1200px wide.</p></div>
           </div>
         </div>
       )}
@@ -136,12 +164,12 @@ export default function CreateEventPage() {
             <div className="space-y-1.5">
               <label className="text-neutral-400 text-xs uppercase tracking-wider">Date</label>
               <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#c4f000] transition-all" />
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#2563eb] transition-all" />
             </div>
             <div className="space-y-1.5">
               <label className="text-neutral-400 text-xs uppercase tracking-wider">Time</label>
               <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#c4f000] transition-all" />
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#2563eb] transition-all" />
             </div>
           </div>
         </div>
@@ -154,12 +182,12 @@ export default function CreateEventPage() {
             <div className="space-y-1.5">
               <label className="text-neutral-400 text-xs uppercase tracking-wider">City</label>
               <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Ahmedabad"
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] transition-all" />
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] transition-all" />
             </div>
             <div className="space-y-1.5">
               <label className="text-neutral-400 text-xs uppercase tracking-wider">Venue</label>
               <input value={form.venue} onChange={e => setForm({ ...form, venue: e.target.value })} placeholder="Riverfront Arena"
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] transition-all" />
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] transition-all" />
             </div>
           </div>
         </div>
@@ -176,22 +204,22 @@ export default function CreateEventPage() {
                   {form.passes.length > 1 && <button type="button" onClick={() => removePass(idx)} className="text-red-400 text-xs">Remove</button>}
                 </div>
                 <input value={pass.name} onChange={e => updatePass(idx, 'name', e.target.value)} placeholder="General / VIP / VVIP"
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#c4f000]" />
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#2563eb]" />
                 <div className="grid grid-cols-2 gap-2">
                   <input type="number" value={pass.price || ''} onChange={e => updatePass(idx, 'price', Number(e.target.value))} placeholder="Price"
-                    className="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#c4f000]" />
+                    className="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#2563eb]" />
                   <input type="number" value={pass.available || ''} onChange={e => updatePass(idx, 'available', Number(e.target.value))} placeholder="Quantity"
-                    className="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#c4f000]" />
+                    className="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#2563eb]" />
                 </div>
                 <input value={pass.benefits} onChange={e => updatePass(idx, 'benefits', e.target.value)} placeholder="Benefits (e.g., Standard entry)"
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#c4f000]" />
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#2563eb]" />
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={pass.transferAllowed} onChange={e => updatePass(idx, 'transferAllowed', e.target.checked)} className="w-4 h-4 rounded accent-[#c4f000]" />
+                  <input type="checkbox" checked={pass.transferAllowed} onChange={e => updatePass(idx, 'transferAllowed', e.target.checked)} className="w-4 h-4 rounded accent-[#2563eb]" />
                   <span className="text-neutral-400 text-xs">Transfer allowed</span>
                 </label>
               </div>
             ))}
-            <button type="button" onClick={addPassType} className="w-full border border-dashed border-neutral-700 rounded-xl py-3 text-neutral-400 text-sm hover:border-[#c4f000] hover:text-[#c4f000] transition-all">+ Add another pass type</button>
+            <button type="button" onClick={addPassType} className="w-full border border-dashed border-neutral-700 rounded-xl py-3 text-neutral-400 text-sm hover:border-[#2563eb] hover:text-[#2563eb] transition-all">+ Add another pass type</button>
           </div>
         </div>
       )}
@@ -204,12 +232,13 @@ export default function CreateEventPage() {
             <div><span className="text-neutral-500">Date:</span> <span className="text-white ml-2">{form.date} at {form.time}</span></div>
             <div><span className="text-neutral-500">Location:</span> <span className="text-white ml-2">{form.venue}, {form.location}</span></div>
             <div><span className="text-neutral-500">Category:</span> <span className="text-white ml-2">{form.category}</span></div>
+            <div><span className="text-neutral-500">Poster:</span> <span className="text-white ml-2">{posterFile?posterFile.name:'Designed fallback artwork'}</span></div>
             <div className="pt-2 border-t border-neutral-800">
               <span className="text-neutral-500">Passes:</span>
               {form.passes.filter(p => p.name && p.price > 0).map((p, i) => (
                 <div key={i} className="flex justify-between mt-1 pl-2">
                   <span className="text-white">{p.name}</span>
-                  <span className="text-[#c4f000]">₹{p.price} x {p.available}</span>
+                  <span className="text-[#2563eb]">₹{p.price} x {p.available}</span>
                 </div>
               ))}
             </div>
@@ -227,12 +256,12 @@ export default function CreateEventPage() {
         )}
         {step < 5 ? (
           <button type="button" onClick={() => setStep(step + 1)} disabled={!canProceed()}
-            className="flex-1 bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
         ) : (
-          <button type="button" onClick={handleSubmit} disabled={loading}
-            className="flex-1 bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50">
-            {loading ? 'Submitting...' : 'Submit for Approval'}
-          </button>
+          <LoadingButton type="button" onClick={handleSubmit} loading={loading} loadingLabel={posterFile?'Uploading poster…':'Submitting…'}
+            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-blue-700/20 transition-all active:scale-[0.98]">
+            Submit for Approval
+          </LoadingButton>
         )}
       </div>
     </div>

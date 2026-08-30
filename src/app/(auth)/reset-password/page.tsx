@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { LoadingButton } from '@/shared/components/ui/LoadingButton';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -75,7 +76,7 @@ export default function ResetPasswordPage() {
       <div className="space-y-1.5">
         <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider">Email</label>
         <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] focus:ring-1 focus:ring-[#c4f000] transition-all"
+          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] transition-all"
           placeholder="you@example.com" />
       </div>
 
@@ -83,33 +84,33 @@ export default function ResetPasswordPage() {
         <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider">6-Digit OTP</label>
         <input type="text" required maxLength={6} inputMode="numeric" pattern="[0-9]{6}"
           value={form.otp} onChange={e => setForm({ ...form, otp: e.target.value.replace(/[^0-9]/g, '') })}
-          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] focus:ring-1 focus:ring-[#c4f000] transition-all text-center tracking-[0.5em] text-lg"
+          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] transition-all text-center tracking-[0.5em] text-lg"
           placeholder="000000" />
       </div>
 
       <div className="space-y-1.5">
         <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider">New Password</label>
         <input type="password" required minLength={6} value={form.newPassword} onChange={e => setForm({ ...form, newPassword: e.target.value })}
-          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] focus:ring-1 focus:ring-[#c4f000] transition-all"
+          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] transition-all"
           placeholder="Min 6 characters" />
       </div>
 
       <div className="space-y-1.5">
         <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider">Confirm Password</label>
         <input type="password" required minLength={6} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
-          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] focus:ring-1 focus:ring-[#c4f000] transition-all"
+          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] transition-all"
           placeholder="Re-enter password" />
       </div>
 
       {error && <div className="bg-red-950/30 border border-red-900/50 text-red-400 text-sm rounded-xl px-4 py-3">{error}</div>}
 
-      <button type="submit" disabled={loading}
-        className="w-full bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50">
-        {loading ? 'Resetting...' : 'Reset Password'}
-      </button>
+      <LoadingButton type="submit" loading={loading} loadingLabel="Resetting…"
+        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98]">
+        Reset Password
+      </LoadingButton>
 
       <p className="text-center text-neutral-500 text-sm">
-        <Link href="/sign-in" className="text-[#c4f000] hover:underline font-medium">← Back to sign in</Link>
+        <Link href="/sign-in" className="text-[#2563eb] hover:underline font-medium">← Back to sign in</Link>
       </p>
     </form>
   );

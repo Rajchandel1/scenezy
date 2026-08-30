@@ -7,6 +7,7 @@ export interface SellerEvent {
   location: string;
   venue: string;
   category: string;
+  posterUrl?: string;
   sellerId: string;
   sellerName: string;
   status: string;
@@ -32,6 +33,7 @@ export interface CreateEventInput {
   location: string;
   venue: string;
   category: string;
+  posterUrl?: string;
   sellerId: string;
   sellerName: string;
   passes: { name: string; price: number; benefits: string; available: number; transferAllowed: boolean }[];

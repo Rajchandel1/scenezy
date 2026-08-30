@@ -14,7 +14,7 @@ export default function GenerateIcons() {
     // Lime circle
     ctx.beginPath();
     ctx.arc(size / 2, size / 2, size * 0.35, 0, Math.PI * 2);
-    ctx.fillStyle = '#c4f000';
+    ctx.fillStyle = '#2563eb';
     ctx.fill();
 
     // P letter
@@ -36,13 +36,13 @@ export default function GenerateIcons() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+    <div className="min-h-screen app-shell flex items-center justify-center">
       <div className="text-center space-y-4">
         <h1 className="text-white text-xl font-bold">Generate PWA Icons</h1>
         <p className="text-neutral-500 text-sm">Download these and put in /public/icons/</p>
         <div className="flex gap-3 justify-center">
-          <button onClick={() => downloadIcon(192)} className="bg-[#c4f000] text-black font-bold px-6 py-3 rounded-xl">Download 192px</button>
-          <button onClick={() => downloadIcon(512)} className="bg-[#c4f000] text-black font-bold px-6 py-3 rounded-xl">Download 512px</button>
+          <button onClick={() => downloadIcon(192)} className="bg-blue-600 text-white font-bold px-6 py-3 rounded-xl">Download 192px</button>
+          <button onClick={() => downloadIcon(512)} className="bg-blue-600 text-white font-bold px-6 py-3 rounded-xl">Download 512px</button>
         </div>
       </div>
     </div>

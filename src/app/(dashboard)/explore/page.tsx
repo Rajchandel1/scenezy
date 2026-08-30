@@ -1,53 +1,18 @@
 'use client';
-
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { ArrowUpRight, MapPin } from 'lucide-react';
+import { SearchBar } from '@/shared/components/ui/SearchBar';
+import { FilterTabs } from '@/shared/components/ui/FilterTabs';
+import { EmptyState, ErrorState, EventCardSkeleton } from '@/shared/components/ui/States';
 
-interface PassType { id: string; name: string; price: number; }
-interface Event { id: string; title: string; date: string; time: string; location: string; status: string; passes: PassType[]; }
-
-export default function ExplorePage() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/data/events')
-      .then(r => r.json())
-      .then(data => { setEvents(data.filter((e: Event) => e.status === 'ACTIVE').sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime())); setLoaded(true); })
-      .catch(() => setLoaded(true));
-  }, []);
-
-  if (!loaded) return <div className="px-4 pt-6"><p className="text-neutral-500">Loading...</p></div>;
-
-  return (
-    <div className="px-4 pt-6 space-y-6">
-      <div>
-        <h1 className="text-white text-xl font-bold">Explore</h1>
-        <p className="text-neutral-500 text-xs mt-0.5">Upcoming events near you</p>
-      </div>
-      <div className="space-y-4">
-        {events.map(event => {
-          const dateObj = new Date(event.date);
-          const dayName = dateObj.toLocaleDateString('en-IN', { weekday: 'short' });
-          const dateStr = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-          const minPrice = Math.min(...event.passes.map(p => p.price));
-          return (
-            <Link key={event.id} href={`/events/${event.id}`} className="flex gap-3 bg-neutral-900 border border-neutral-800 rounded-xl p-3 active:scale-[0.98] transition-transform">
-              <div className="flex flex-col items-center justify-center w-12 h-14 bg-neutral-800 rounded-lg shrink-0">
-                <span className="text-[#c4f000] text-[10px] font-bold uppercase">{dayName}</span>
-                <span className="text-white text-sm font-bold">{dateStr.split(' ')[0]}</span>
-                <span className="text-neutral-500 text-[9px]">{dateStr.split(' ')[1]}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-white text-sm font-semibold truncate">{event.title}</h3>
-                <p className="text-neutral-500 text-xs mt-0.5">{event.location} · {event.time}</p>
-                <p className="text-[#c4f000] text-xs font-medium mt-1">From ₹{minPrice}</p>
-              </div>
-              <svg className="w-4 h-4 text-neutral-600 self-center shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
-  );
+interface Event { id:string;title:string;date:string;time:string;location:string;venue:string;category:string;passes:Array<{price:number}> }
+export default function ExplorePage(){
+  const [events,setEvents]=useState<Event[]>([]),[tabs,setTabs]=useState([{id:'all',label:'Everything'}]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[search,setSearch]=useState(''),[category,setCategory]=useState('all');
+  const load=useCallback(async()=>{setLoading(true);setError('');try{const response=await fetch('/api/data/content');if(!response.ok)throw new Error();const data=await response.json();setEvents((data.events||[]).sort((a:Event,b:Event)=>+new Date(a.date)-+new Date(b.date)));setTabs([{id:'all',label:'Everything'},...data.categories.map((item:{name:string})=>({id:item.name,label:item.name}))]);}catch{setError('Explore is unavailable right now.');}finally{setLoading(false);}},[]);
+  useEffect(()=>{load();},[load]);
+  const filtered=useMemo(()=>events.filter(event=>(category==='all'||event.category===category)&&`${event.title} ${event.location} ${event.venue}`.toLowerCase().includes(search.toLowerCase())),[events,category,search]);
+  return <div className="px-5 sm:px-6 pt-7 pb-5 space-y-7"><header><p className="eyebrow">Find your next scene</p><h1 className="display-serif text-4xl text-[var(--ink)] mt-1">Explore</h1><p className="muted text-sm mt-2">Events, gatherings and experiences worth showing up for.</p></header><SearchBar value={search} onChange={setSearch} placeholder="Search by event, city or venue…"/><FilterTabs tabs={tabs} activeTab={category} onTabChange={setCategory}/>
+    {loading?<div className="grid sm:grid-cols-2 gap-4"><EventCardSkeleton/><EventCardSkeleton/><EventCardSkeleton/></div>:error?<ErrorState message={error} onRetry={load}/>:filtered.length===0?<EmptyState title="No matching scenes" description="Try another category or a broader search." actionLabel="Reset search" actionOnClick={()=>{setSearch('');setCategory('all');}}/>:<div className="grid sm:grid-cols-2 gap-4">{filtered.map((event,index)=>{const date=new Date(event.date),min=event.passes.length?Math.min(...event.passes.map(pass=>pass.price)):0;return <Link href={`/events/${event.id}`} key={event.id} className={`editorial-card overflow-hidden group ${index===0?'sm:col-span-2 sm:grid sm:grid-cols-[1.1fr_.9fr]':''}`}><div className={`relative bg-gradient-to-br from-blue-950 via-blue-700 to-indigo-400 overflow-hidden ${index===0?'h-56 sm:h-full':'h-40'}`}><div className="absolute w-48 h-48 rounded-full border-[24px] border-white/10 -top-16 -right-8"/><span className="absolute left-4 top-4 text-white/75 eyebrow">{event.category}</span><div className="absolute bottom-4 left-4 text-white"><p className="display-serif text-4xl leading-none">{date.getDate()}</p><p className="text-[10px] uppercase tracking-[.18em]">{date.toLocaleDateString('en-IN',{month:'short',weekday:'short'})}</p></div></div><div className="p-5"><div className="flex items-start justify-between gap-3"><div><p className="eyebrow">{event.time}</p><h2 className="display-serif text-2xl text-white mt-2 leading-tight">{event.title}</h2></div><span className="w-9 h-9 rounded-full brand-button grid place-items-center shrink-0"><ArrowUpRight size={16}/></span></div><p className="muted text-xs mt-4 flex gap-1.5"><MapPin size={13}/>{event.venue}, {event.location}</p><div className="mt-5 pt-4 border-t border-[var(--line)] flex justify-between text-xs"><span className="muted">Hosted experience</span><strong className="text-[var(--terra)]">From ₹{min}</strong></div></div></Link>})}</div>}
+  </div>;
 }

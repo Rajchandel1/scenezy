@@ -1,69 +1,37 @@
 import { NextRequest } from 'next/server';
-import { readJson, writeJson, generateId } from '@/shared/lib/json-db';
+import { and, desc, eq } from 'drizzle-orm';
+import { db } from '@/shared/db';
+import { notifications } from '@/shared/db/schema';
+import { requireApiUser } from '@/shared/lib/api-auth';
 
-interface Notification {
-  id: string; userId: string; type: string;
-  title: string; body: string; icon: string;
-  read: boolean; createdAt: string; link?: string;
-}
-interface NotifFile { notifications: Notification[]; }
-
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get('userId');
-  if (!userId) return Response.json([]);
-
-  const data = readJson<NotifFile>('notifications.json');
-  const userNotifs = data.notifications
-    .filter(n => n.userId === userId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  return Response.json(userNotifs);
+export async function GET(req:NextRequest) {
+  const auth=await requireApiUser(); if(auth.error)return auth.error;
+  const requested=new URL(req.url).searchParams.get('userId');
+  if(requested && auth.profile.role!=='ADMIN' && requested!==auth.profile.id) return Response.json({error:'Forbidden'},{status:403});
+  const userId=auth.profile.role==='ADMIN'&&requested?requested:auth.profile.id;
+  return Response.json(await db.select().from(notifications).where(eq(notifications.userId,userId)).orderBy(desc(notifications.createdAt)));
 }
 
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { action } = body;
-  const data = readJson<NotifFile>('notifications.json');
-
-  if (action === 'create') {
-    const notif: Notification = {
-      id: generateId('notif'),
-      userId: body.userId,
-      type: body.type || 'info',
-      title: body.title,
-      body: body.body,
-      icon: body.icon || '🔔',
-      read: false,
-      createdAt: new Date().toISOString(),
-      link: body.link,
-    };
-    data.notifications.push(notif);
-    writeJson('notifications.json', data);
-    return Response.json(notif);
+export async function POST(req:NextRequest) {
+  const auth=await requireApiUser(); if(auth.error)return auth.error;
+  const body=await req.json();
+  if(body.action==='mark-read') {
+    await db.update(notifications).set({read:true}).where(and(eq(notifications.id,body.notifId),eq(notifications.userId,auth.profile.id)));
+    return Response.json({success:true});
   }
-
-  if (action === 'mark-read') {
-    const idx = data.notifications.findIndex(n => n.id === body.notifId);
-    if (idx !== -1) {
-      data.notifications[idx].read = true;
-      writeJson('notifications.json', data);
-    }
-    return Response.json({ success: true });
+  if(body.action==='mark-all-read') {
+    await db.update(notifications).set({read:true}).where(eq(notifications.userId,auth.profile.id));
+    return Response.json({success:true});
   }
-
-  if (action === 'mark-all-read') {
-    data.notifications.forEach(n => {
-      if (n.userId === body.userId) n.read = true;
-    });
-    writeJson('notifications.json', data);
-    return Response.json({ success: true });
+  if(body.action==='unread-count') {
+    const rows=await db.select({id:notifications.id}).from(notifications).where(and(eq(notifications.userId,auth.profile.id),eq(notifications.read,false)));
+    return Response.json({count:rows.length});
   }
-
-  if (action === 'unread-count') {
-    const count = data.notifications.filter(n => n.userId === body.userId && !n.read).length;
-    return Response.json({ count });
+  // Self-notifications remain available for non-sensitive client UX; the
+  // authenticated identity always overrides a browser-provided userId.
+  if(body.action==='create') {
+    const [created]=await db.insert(notifications).values({userId:auth.profile.id,type:String(body.type||'info'),title:String(body.title||'Update').slice(0,120),body:String(body.body||'').slice(0,500),icon:String(body.icon||'info').slice(0,30),link:body.link?String(body.link).slice(0,300):null}).returning();
+    return Response.json(created,{status:201});
   }
-
-  return Response.json({ error: 'Unknown action' }, { status: 400 });
+  return Response.json({error:'Unknown action'},{status:400});
 }

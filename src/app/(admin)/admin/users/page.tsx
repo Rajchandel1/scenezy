@@ -33,7 +33,7 @@ export default function AdminUsersPage() {
         <Link href="/admin" className="w-8 h-8 bg-neutral-900 border border-neutral-800 rounded-full flex items-center justify-center"><svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></Link>
         <h1 className="text-white text-lg font-bold">Users ({users.length})</h1>
       </div>
-      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#c4f000]" />
+      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#2563eb]" />
       <div className="space-y-2">
         {filtered.map(u => (
           <div key={u.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between">

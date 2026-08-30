@@ -39,7 +39,7 @@ export function InstallPrompt() {
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
       <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 shadow-2xl flex items-center gap-3 max-w-sm mx-auto">
-        <div className="w-10 h-10 bg-[#c4f000] rounded-xl flex items-center justify-center shrink-0">
+        <div className="w-10 h-10 bg-[#2563eb] rounded-xl flex items-center justify-center shrink-0">
           <span className="text-black font-black text-lg">P</span>
         </div>
         <div className="flex-1 min-w-0">
@@ -48,7 +48,7 @@ export function InstallPrompt() {
         </div>
         <button 
           onClick={handleInstall}
-          className="bg-[#c4f000] hover:bg-[#b8e600] text-black text-xs font-bold px-4 py-2 rounded-xl transition-all active:scale-95 shrink-0"
+          className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all active:scale-95 shrink-0"
         >
           Install
         </button>

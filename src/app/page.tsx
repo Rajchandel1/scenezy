@@ -27,8 +27,8 @@ export default function RootPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="w-8 h-8 bg-[#c4f000] rounded-lg flex items-center justify-center animate-pulse">
+      <div className="min-h-screen app-shell flex items-center justify-center">
+        <div className="w-8 h-8 bg-[#2563eb] rounded-lg flex items-center justify-center animate-pulse">
           <span className="text-black font-black text-sm">P</span>
         </div>
       </div>

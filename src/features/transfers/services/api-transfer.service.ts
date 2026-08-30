@@ -1,85 +1,21 @@
 import { Transfer, CreateTransferInput, ClaimTransferInput } from '../types';
-import { NotificationService } from '@/features/notifications';
+
+async function json(response:Response) { const data=await response.json(); if(!response.ok) throw new Error(data.error||'Request failed'); return data; }
 
 export class ApiTransferService {
-  static async createTransfer(input: CreateTransferInput): Promise<Transfer> {
-    const res = await fetch('/api/data/transfers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', ...input }),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to create transfer');
-    }
-    const transfer = await res.json();
-
-    // 🔔 Notify sender
-    await NotificationService.send(
-      input.senderUserId,
-      'Pass Sent ✈️',
-      `${input.passTypeName} pass for ${input.eventTitle} sent to ${input.recipientIdentifier}`,
-      '✈️',
-      'transfer',
-      `/passes/${input.passId}`
-    );
-
-    return transfer;
+  static async createTransfer(input:CreateTransferInput):Promise<Transfer> {
+    return json(await fetch('/api/data/transfers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',passId:input.passId,recipientIdentifier:input.recipientIdentifier})}));
   }
-
-  static async getPendingClaimsForUser(email: string): Promise<Transfer[]> {
-    const res = await fetch(`/api/data/transfers?forUser=${encodeURIComponent(email)}`);
-    return res.json();
+  static async getPendingClaimsForUser(email:string):Promise<Transfer[]> { return json(await fetch(`/api/data/transfers?forUser=${encodeURIComponent(email)}`)); }
+  static async claimTransfer(input:ClaimTransferInput):Promise<{success:boolean;message:string;passId?:string}> {
+    try { const data=await json(await fetch('/api/data/transfers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'claim',transferId:input.transferId})})); return {success:true,message:'Pass is now yours!',passId:data.passId}; }
+    catch(error) { return {success:false,message:error instanceof Error?error.message:'Claim failed'}; }
   }
-
-  static async claimTransfer(input: ClaimTransferInput): Promise<{ success: boolean; message: string; passId?: string }> {
-    const res = await fetch('/api/data/transfers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'claim', ...input }),
-    });
-    const data = await res.json();
-    if (!res.ok) return { success: false, message: data.error || 'Claim failed' };
-
-    // 🔔 Notify recipient
-    await NotificationService.send(
-      input.recipientUserId,
-      'Pass Claimed! 🎉',
-      'The pass is now yours. Check your wallet!',
-      '🎫',
-      'claim',
-      `/passes/${data.passId}`
-    );
-
-    // 🔔 Notify sender that their pass was claimed
-    // We need to find the transfer to get sender info
-    const transfersRes = await fetch(`/api/data/transfers?passId=${data.passId}`);
-    // Sender notification handled via the transfer data
-    
-    return { success: true, message: 'Pass is now yours!', passId: data.passId };
+  static async cancelTransfer(transferId:string,userId:string):Promise<{success:boolean;message:string}> {
+    void userId; // Kept for compatibility; the server derives identity from the session.
+    try { await json(await fetch('/api/data/transfers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'cancel',transferId})})); return {success:true,message:'Transfer cancelled.'}; }
+    catch(error) { return {success:false,message:error instanceof Error?error.message:'Cancel failed'}; }
   }
-
-  static async cancelTransfer(transferId: string, userId: string): Promise<{ success: boolean; message: string }> {
-    const res = await fetch('/api/data/transfers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'cancel', transferId, userId }),
-    });
-    const data = await res.json();
-    if (!res.ok) return { success: false, message: data.error || 'Cancel failed' };
-
-    await NotificationService.send(userId, 'Transfer Cancelled', 'Your pass transfer has been cancelled. Pass is back in your wallet.', '↩️', 'info', '/passes');
-
-    return { success: true, message: 'Transfer cancelled.' };
-  }
-
-  static async getPendingTransferForPass(passId: string): Promise<Transfer | null> {
-    const res = await fetch(`/api/data/transfers?passId=${passId}`);
-    return res.json();
-  }
-
-  static async getSentTransfers(userId: string): Promise<Transfer[]> {
-    const res = await fetch(`/api/data/transfers?senderId=${userId}`);
-    return res.json();
-  }
+  static async getPendingTransferForPass(passId:string):Promise<Transfer|null> { return json(await fetch(`/api/data/transfers?passId=${passId}`)); }
+  static async getSentTransfers(userId:string):Promise<Transfer[]> { return json(await fetch(`/api/data/transfers?senderId=${userId}`)); }
 }

@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authService } from '@/features/auth';
+import { useActionDialog } from '@/shared/components/ui/ActionDialog';
 
 export default function AdminPassesPage() {
   const [passes, setPasses] = useState<any[]>([]);
   const [admin, setAdmin] = useState<any>(null);
   const [filter, setFilter] = useState('ALL');
+  const {ask,dialog}=useActionDialog();
 
   useEffect(() => {
     async function load() {
@@ -20,7 +22,7 @@ export default function AdminPassesPage() {
   }, []);
 
   const handleRevoke = async (passId: string) => {
-    const reason = prompt('Reason for revocation?');
+    const reason = await ask({title:'Revoke this pass?',description:'The holder will no longer be able to use it at entry.',confirmLabel:'Revoke pass',tone:'danger',field:{label:'Reason',placeholder:'Why is this pass being revoked?',required:true}});
     if (!reason) return;
     await fetch('/api/data/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'revoke-pass', passId, reason, adminId: admin?.id, adminName: admin?.name }) });
     const res = await fetch('/api/data/admin?action=passes');
@@ -37,7 +39,7 @@ export default function AdminPassesPage() {
       </div>
       <div className="flex gap-2">
         {['ALL', 'ACTIVE', 'USED', 'REVOKED'].map(f => (
-          <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${filter === f ? 'bg-[#c4f000] text-black' : 'bg-neutral-900 text-neutral-400 border border-neutral-800'}`}>{f}</button>
+          <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${filter === f ? 'bg-blue-600 text-white' : 'bg-neutral-900 text-neutral-400 border border-neutral-800'}`}>{f}</button>
         ))}
       </div>
       <div className="space-y-2">
@@ -57,6 +59,7 @@ export default function AdminPassesPage() {
         ))}
         {filtered.length === 0 && <p className="text-neutral-500 text-sm text-center py-8">No passes found</p>}
       </div>
+      {dialog}
     </div>
   );
 }

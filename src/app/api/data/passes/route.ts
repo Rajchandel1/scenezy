@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/db';
 import { passes, passTypes } from '@/shared/db/schema';
 import { eq, sql } from 'drizzle-orm';
+import { requireApiUser } from '@/shared/lib/api-auth';
 
 function generateCredential(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -11,25 +12,33 @@ function generateCredential(): string {
 }
 
 export async function GET(req: NextRequest) {
+  const auth = await requireApiUser();
+  if (auth.error) return auth.error;
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get('userId');
   const passId = searchParams.get('passId');
 
   if (passId) {
     const result = await db.select().from(passes).where(eq(passes.id, passId)).limit(1);
-    return Response.json(result[0] || null);
+    const pass = result[0];
+    if (pass && auth.profile.role !== 'ADMIN' && pass.ownerUserId !== auth.profile.id) return Response.json({ error:'Forbidden' }, { status:403 });
+    return Response.json(pass || null);
   }
 
   if (userId) {
+    if (auth.profile.role !== 'ADMIN' && userId !== auth.profile.id) return Response.json({ error:'Forbidden' }, { status:403 });
     const result = await db.select().from(passes).where(eq(passes.ownerUserId, userId));
     return Response.json(result);
   }
 
+  if (auth.profile.role !== 'ADMIN') return Response.json({ error:'Forbidden' }, { status:403 });
   const result = await db.select().from(passes);
   return Response.json(result);
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireApiUser(['ADMIN']);
+  if (auth.error) return auth.error;
   const body = await req.json();
   const inputs = body.bulk ? body.items : [body];
 

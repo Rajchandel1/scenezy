@@ -1,47 +1,54 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/db';
-import { users, events, passes, orders, entries, auditLogs } from '@/shared/db/schema';
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { users, events, passes, orders, entries, auditLogs, passTypes, notifications } from '@/shared/db/schema';
+import { eq, desc, sql } from 'drizzle-orm';
+import { requireApiUser } from '@/shared/lib/api-auth';
 
 async function addAuditLog(actorId: string, actorName: string, action: string, targetType: string, targetId: string, metadata: any = {}) {
   await db.insert(auditLogs).values({ actorId, actorName, action, targetType, targetId, metadata });
 }
 
 export async function GET(req: NextRequest) {
+  const auth = await requireApiUser(['ADMIN']);
+  if (auth.error) return auth.error;
   const { searchParams } = new URL(req.url);
   const action = searchParams.get('action');
 
   if (action === 'stats') {
-    const allUsers = await db.select().from(users);
-    const allEvents = await db.select().from(events);
-    const allPasses = await db.select().from(passes);
-    const allOrders = await db.select().from(orders);
-    const allEntries = await db.select().from(entries);
-
-    const totalRevenue = allOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-    const today = new Date().toDateString();
-    const entriesToday = allEntries.filter(e => new Date(e.scannedAt).toDateString() === today);
+    const [userStats,allEvents,passStats,orderStats,entryStats]=await Promise.all([
+      db.select({
+        totalUsers:sql<number>`count(*) filter (where ${users.role} = 'USER')::int`,
+        totalSellers:sql<number>`count(*) filter (where ${users.role} = 'SELLER')::int`,
+        pendingSellers:sql<number>`count(*) filter (where ${users.role} = 'SELLER' and ${users.approved} = false and ${users.rejected} = false)::int`,
+      }).from(users),
+      db.select().from(events),
+      db.select({totalPasses:sql<number>`count(*)::int`,activePasses:sql<number>`count(*) filter (where ${passes.status} = 'ACTIVE')::int`,usedPasses:sql<number>`count(*) filter (where ${passes.status} = 'USED')::int`}).from(passes),
+      db.select({totalOrders:sql<number>`count(*)::int`,totalRevenue:sql<number>`coalesce(sum(${orders.total}),0)::int`}).from(orders),
+      db.select({totalEntries:sql<number>`count(*)::int`,entriesToday:sql<number>`count(*) filter (where ${entries.scannedAt} >= current_date)::int`,validEntriesToday:sql<number>`count(*) filter (where ${entries.scannedAt} >= current_date and ${entries.result} = 'VALID')::int`}).from(entries),
+    ]);
+    const user=userStats[0],pass=passStats[0],order=orderStats[0],entry=entryStats[0];
 
     return Response.json({
-      totalUsers: allUsers.filter(u => u.role === 'USER').length,
-      totalSellers: allUsers.filter(u => u.role === 'SELLER').length,
-      pendingSellers: allUsers.filter(u => u.role === 'SELLER' && !u.approved && !u.rejected).length,
+      totalUsers:user.totalUsers,
+      totalSellers:user.totalSellers,
+      pendingSellers:user.pendingSellers,
       totalEvents: allEvents.length,
       activeEvents: allEvents.filter(e => e.status === 'ACTIVE').length,
       pendingEvents: allEvents.filter(e => e.status === 'PENDING_APPROVAL').length,
-      totalPasses: allPasses.length,
-      activePasses: allPasses.filter(p => p.status === 'ACTIVE').length,
-      usedPasses: allPasses.filter(p => p.status === 'USED').length,
-      totalOrders: allOrders.length,
-      totalRevenue,
-      totalEntries: allEntries.length,
-      entriesToday: entriesToday.length,
-      validEntriesToday: entriesToday.filter(e => e.result === 'VALID').length,
+      totalPasses:pass.totalPasses,
+      activePasses:pass.activePasses,
+      usedPasses:pass.usedPasses,
+      totalOrders:order.totalOrders,
+      totalRevenue:order.totalRevenue,
+      totalEntries:entry.totalEntries,
+      entriesToday:entry.entriesToday,
+      validEntriesToday:entry.validEntriesToday,
+      events:allEvents,
     });
   }
 
   if (action === 'users') {
-    const result = await db.select({ id: users.id, email: users.email, name: users.name, role: users.role, suspended: users.suspended, createdAt: users.createdAt }).from(users).where(eq(users.role, 'USER'));
+    const result = await db.select({ id: users.id, email: users.email, name: users.name, role: users.role, approved: users.approved, suspended: users.suspended, createdAt: users.createdAt }).from(users);
     return Response.json(result);
   }
 
@@ -51,8 +58,11 @@ export async function GET(req: NextRequest) {
   }
 
   if (action === 'events') {
-    const result = await db.select().from(events).orderBy(desc(events.createdAt));
-    return Response.json(result);
+    const [result,allPassTypes]=await Promise.all([
+      db.select().from(events).orderBy(desc(events.createdAt)),
+      db.select().from(passTypes),
+    ]);
+    return Response.json(result.map(event => ({ ...event, passes: allPassTypes.filter(pass => pass.eventId === event.id) })));
   }
 
   if (action === 'passes') {
@@ -79,12 +89,17 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireApiUser(['ADMIN']);
+  if (auth.error) return auth.error;
   const body = await req.json();
   const { action } = body;
+  body.adminId = auth.profile.id;
+  body.adminName = auth.profile.name;
 
   if (action === 'suspend-user') {
     await db.update(users).set({ suspended: true }).where(eq(users.id, body.userId));
     await addAuditLog(body.adminId, body.adminName, 'SUSPEND_USER', 'user', body.userId);
+    await db.insert(notifications).values({userId:body.userId,type:'account',title:'Account suspended',body:'Contact support if you believe this is a mistake.',icon:'alert',link:'/profile'});
     return Response.json({ success: true });
   }
 
@@ -97,23 +112,30 @@ export async function POST(req: NextRequest) {
   if (action === 'approve-seller') {
     await db.update(users).set({ approved: true, rejected: false }).where(eq(users.id, body.userId));
     await addAuditLog(body.adminId, body.adminName, 'APPROVE_SELLER', 'seller', body.userId);
+    await db.insert(notifications).values({userId:body.userId,type:'seller-approved',title:'Seller access approved',body:'You can now create and submit events.',icon:'store',link:'/seller'});
     return Response.json({ success: true });
   }
 
   if (action === 'reject-seller') {
     await db.update(users).set({ rejected: true, approved: false }).where(eq(users.id, body.userId));
     await addAuditLog(body.adminId, body.adminName, 'REJECT_SELLER', 'seller', body.userId);
+    await db.insert(notifications).values({userId:body.userId,type:'seller-rejected',title:'Seller application declined',body:String(body.reason||'Contact support for more information.'),icon:'alert',link:'/profile'});
     return Response.json({ success: true });
   }
 
   if (action === 'approve-event') {
-    await db.update(events).set({ status: 'ACTIVE' }).where(eq(events.id, body.eventId));
+    const [event] = await db.update(events).set({ status: 'ACTIVE', moderationReason: null }).where(eq(events.id, body.eventId)).returning();
+    if (!event) return Response.json({ error:'Event not found' }, { status:404 });
+    if (event.sellerId) await db.insert(notifications).values({userId:event.sellerId,type:'event-approved',title:'Event approved',body:`${event.title} is now live.`,icon:'calendar',link:`/seller/events/${event.id}`});
     await addAuditLog(body.adminId, body.adminName, 'APPROVE_EVENT', 'event', body.eventId);
     return Response.json({ success: true });
   }
 
   if (action === 'reject-event') {
-    await db.update(events).set({ status: 'REJECTED' }).where(eq(events.id, body.eventId));
+    const reason=String(body.reason||'Please review the event information and submit it again.').slice(0,500);
+    const [event] = await db.update(events).set({ status: 'REJECTED', moderationReason:reason }).where(eq(events.id, body.eventId)).returning();
+    if (!event) return Response.json({ error:'Event not found' }, { status:404 });
+    if (event.sellerId) await db.insert(notifications).values({userId:event.sellerId,type:'event-rejected',title:'Event needs changes',body:`${event.title}: ${reason}`,icon:'alert',link:`/seller/events/${event.id}`});
     await addAuditLog(body.adminId, body.adminName, 'REJECT_EVENT', 'event', body.eventId);
     return Response.json({ success: true });
   }
@@ -124,9 +146,21 @@ export async function POST(req: NextRequest) {
     return Response.json({ success: true });
   }
 
-  if (action === 'cancel-event') {
-    await db.update(events).set({ status: 'CANCELLED' }).where(eq(events.id, body.eventId));
-    await addAuditLog(body.adminId, body.adminName, 'CANCEL_EVENT', 'event', body.eventId);
+  if (action === 'close-event' || action === 'cancel-event') {
+    const [event] = await db.update(events).set({ status: 'CANCELLED', moderationReason:String(body.reason||'Closed by an administrator.') }).where(eq(events.id, body.eventId)).returning();
+    if (!event) return Response.json({error:'Event not found'},{status:404});
+    if(event.sellerId) await db.insert(notifications).values({userId:event.sellerId,type:'event-closed',title:'Event closed',body:`${event.title} was closed by an administrator.`,icon:'calendar',link:`/seller/events/${event.id}`});
+    await addAuditLog(body.adminId, body.adminName, 'CLOSE_EVENT', 'event', body.eventId);
+    return Response.json({ success: true });
+  }
+
+  if (action === 'continue-event') {
+    const [existing]=await db.select().from(events).where(eq(events.id,body.eventId)).limit(1);
+    if(!existing)return Response.json({error:'Event not found'},{status:404});
+    if(existing.status!=='CANCELLED')return Response.json({error:'Only a closed event can be continued'},{status:409});
+    const [event]=await db.update(events).set({status:'ACTIVE',moderationReason:null}).where(eq(events.id,body.eventId)).returning();
+    if(event.sellerId)await db.insert(notifications).values({userId:event.sellerId,type:'event-continued',title:'Event continued',body:`${event.title} is live and visible to customers again.`,icon:'calendar',link:`/seller/events/${event.id}`});
+    await addAuditLog(body.adminId,body.adminName,'CONTINUE_EVENT','event',body.eventId);
     return Response.json({ success: true });
   }
 

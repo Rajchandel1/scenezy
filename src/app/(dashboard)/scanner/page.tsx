@@ -96,7 +96,7 @@ export default function ScannerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-8">
+    <div className="min-h-screen app-shell pb-8">
       {/* Header */}
       <div className="px-4 pt-6 flex items-center justify-between">
         <div>
@@ -147,7 +147,7 @@ export default function ScannerPage() {
               )}
             </div>
             {!scanning && (
-              <button onClick={startScanner} className="w-full bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold py-3.5 transition-all active:scale-[0.98]">Start Camera</button>
+              <button onClick={startScanner} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 transition-all active:scale-[0.98]">Start Camera</button>
             )}
             {scanning && (
               <button onClick={stopScanner} className="w-full bg-neutral-800 text-neutral-300 font-medium py-3 transition-all">Stop Camera</button>
@@ -161,9 +161,9 @@ export default function ScannerPage() {
             <p className="text-neutral-500 text-xs uppercase tracking-wider font-medium">Or paste credential / QR content</p>
             <div className="flex gap-2">
               <input value={manualCode} onChange={e => setManualCode(e.target.value)} placeholder="PASS_xxx... or https://scenezy.app/v/PASS_xxx"
-                className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] transition-all font-mono" />
+                className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] transition-all font-mono" />
               <button onClick={handleManualVerify} disabled={!manualCode.trim()}
-                className="bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold px-5 py-3 rounded-xl transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-3 rounded-xl transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed text-sm">
                 Verify
               </button>
             </div>

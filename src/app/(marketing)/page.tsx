@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePWAInstall } from '@/shared/lib/use-pwa';
 import { useState, useEffect } from 'react';
+import { PassLogo } from '@/shared/components/branding/PassLogo';
 
 export default function LandingPage() {
   const { canInstall, isInstalled, install } = usePWAInstall();
@@ -27,11 +28,11 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] overflow-hidden">
+    <div className="min-h-screen app-shell overflow-hidden">
       {/* Ambient glow effects */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[#c4f000]/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#c4f000]/3 rounded-full blur-[100px]" />
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[#2563eb]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#2563eb]/3 rounded-full blur-[100px]" />
       </div>
 
       <div className="relative z-10 max-w-lg mx-auto px-5 py-8 min-h-screen flex flex-col">
@@ -39,9 +40,7 @@ export default function LandingPage() {
         {/* Top Nav */}
         <div className="flex items-center justify-between mb-12">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#c4f000] rounded-lg flex items-center justify-center">
-              <span className="text-black font-black text-sm">P</span>
-            </div>
+            <PassLogo className="w-11 h-11"/>
             <span className="text-white font-bold text-lg tracking-tight">Scenezy</span>
           </div>
           <Link href="/sign-in" className="text-neutral-400 text-sm hover:text-white transition-colors">Sign In</Link>
@@ -50,14 +49,14 @@ export default function LandingPage() {
         {/* Hero */}
         <div className="flex-1 flex flex-col justify-center space-y-8">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 bg-[#c4f000]/10 border border-[#c4f000]/20 rounded-full px-3 py-1">
-              <div className="w-1.5 h-1.5 bg-[#c4f000] rounded-full animate-pulse" />
-              <span className="text-[#c4f000] text-[11px] font-medium">Now Live</span>
+            <div className="inline-flex items-center gap-2 bg-[#2563eb]/10 border border-[#2563eb]/20 rounded-full px-3 py-1">
+              <div className="w-1.5 h-1.5 bg-[#2563eb] rounded-full animate-pulse" />
+              <span className="text-[#2563eb] text-[11px] font-medium">Now Live</span>
             </div>
             
             <h1 className="text-white text-4xl sm:text-5xl font-bold leading-[1.1] tracking-tight">
               Your events.<br/>
-              <span className="text-[#c4f000]">Your passes.</span><br/>
+              <span className="text-[#2563eb]">Your passes.</span><br/>
               Simple.
             </h1>
             
@@ -68,7 +67,7 @@ export default function LandingPage() {
 
           {/* CTA Buttons */}
           <div className="space-y-3">
-            <Link href="/sign-up" className="block w-full bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold py-4 rounded-2xl text-center transition-all active:scale-[0.98] text-base">
+            <Link href="/sign-up" className="block w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl text-center transition-all active:scale-[0.98] text-base">
               Get Started Free
             </Link>
             
@@ -116,7 +115,7 @@ export default function LandingPage() {
 
         {/* Bottom */}
         <div className="text-center pt-4 border-t border-neutral-900">
-          <p className="text-neutral-700 text-[10px]">Paper Plane UX · Jet Engine Backend</p>
+          <p className="text-neutral-700 text-[10px]">Secure event access, all in one place.</p>
         </div>
       </div>
     </div>

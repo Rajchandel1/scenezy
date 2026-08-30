@@ -21,7 +21,7 @@ export default function AdminOrdersPage() {
           <div key={o.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <p className="text-white text-sm font-medium">{o.eventTitle}</p>
-              <span className="text-[#c4f000] font-bold text-sm">₹{o.total}</span>
+              <span className="text-[#2563eb] font-bold text-sm">₹{o.total}</span>
             </div>
             <p className="text-neutral-500 text-xs mt-1">{o.items?.length || 0} items · {o.paymentStatus} · {new Date(o.createdAt).toLocaleString()}</p>
             <p className="text-neutral-600 text-[10px] mt-1 font-mono">{o.id}</p>

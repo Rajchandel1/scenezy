@@ -1,7 +1,12 @@
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+import { AdminNav } from '@/shared/components/layout/AdminNav';
+import { requirePageRole } from '@/shared/lib/page-auth';
+
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  await requirePageRole(['ADMIN']);
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
-      <div className="max-w-4xl mx-auto px-4 py-6 pb-12">{children}</div>
+    <div className="app-shell">
+      <AdminNav />
+      <main className="max-w-6xl mx-auto px-4 py-6 pb-14">{children}</main>
     </div>
   );
 }

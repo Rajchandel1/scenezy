@@ -1,15 +1,20 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/db';
-import { events, passTypes, users } from '@/shared/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { categories, events, passTypes, users } from '@/shared/db/schema';
+import { eq, and, desc, inArray } from 'drizzle-orm';
+import { requireApiUser } from '@/shared/lib/api-auth';
+import { eventPosterUrl } from '@/shared/lib/event-poster';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const sellerId = searchParams.get('sellerId');
+  const eventId=searchParams.get('id');
   const status = searchParams.get('status');
   const includePending = searchParams.get('includePending');
 
-  let conditions: any[] = [];
+  const conditions: any[] = [];
+
+  if(eventId)conditions.push(eq(events.id,eventId));
 
   if (sellerId) {
     conditions.push(eq(events.sellerId, sellerId));
@@ -25,24 +30,25 @@ export async function GET(req: NextRequest) {
     ? await db.select().from(events).where(and(...conditions)).orderBy(desc(events.date))
     : await db.select().from(events).orderBy(desc(events.date));
 
-  // Fetch pass types for each event
-  const result = await Promise.all(
-    allEvents.map(async (event) => {
-      const pts = await db.select().from(passTypes).where(eq(passTypes.eventId, event.id));
-      return { ...event, passes: pts };
-    })
-  );
+  const allPassTypes=allEvents.length?await db.select().from(passTypes).where(inArray(passTypes.eventId,allEvents.map(event=>event.id))):[];
+  const result=allEvents.map(event=>({...event,posterUrl:eventPosterUrl(event.posterUrl),passes:allPassTypes.filter(type=>type.eventId===event.id)}));
 
-  return Response.json(result);
+  return Response.json(eventId?(result[0]||null):result);
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireApiUser(['SELLER']);
+  if (auth.error) return auth.error;
   const body = await req.json();
 
   // Check if seller is approved
-  const seller = await db.select().from(users).where(eq(users.id, body.sellerId)).limit(1);
+  const seller = await db.select().from(users).where(eq(users.id, auth.profile.id)).limit(1);
   if (!seller[0]) return Response.json({ error: 'Seller not found' }, { status: 404 });
   if (!seller[0].approved) return Response.json({ error: 'Your seller account is not yet approved.' }, { status: 403 });
+
+  const requestedCategory=String(body.category||'').trim();
+  const [category]=await db.select().from(categories).where(and(eq(categories.name,requestedCategory),eq(categories.active,true))).limit(1);
+  if(!category)return Response.json({error:'Choose an available event category'},{status:400});
 
   // Create event
   const [newEvent] = await db.insert(events).values({
@@ -52,9 +58,10 @@ export async function POST(req: NextRequest) {
     time: body.time,
     location: body.location,
     venue: body.venue,
-    category: body.category || 'Other',
-    sellerId: body.sellerId,
-    sellerName: body.sellerName,
+    category: category.name,
+    posterUrl: body.posterUrl ? String(body.posterUrl).trim().slice(0, 2000) : null,
+    sellerId: auth.profile.id,
+    sellerName: auth.profile.name,
     status: 'PENDING_APPROVAL',
   }).returning();
 
@@ -75,4 +82,15 @@ export async function POST(req: NextRequest) {
 
   const pts = await db.select().from(passTypes).where(eq(passTypes.eventId, newEvent.id));
   return Response.json({ ...newEvent, passes: pts });
+}
+
+export async function PATCH(req: NextRequest) {
+  const auth = await requireApiUser(['SELLER']);
+  if (auth.error) return auth.error;
+  const body = await req.json();
+  const [existing] = await db.select().from(events).where(and(eq(events.id, body.eventId), eq(events.sellerId, auth.profile.id))).limit(1);
+  if (!existing) return Response.json({ error:'Event not found' }, { status:404 });
+  if (existing.status !== 'REJECTED') return Response.json({ error:'Only rejected events can be resubmitted' }, { status:409 });
+  const [updated] = await db.update(events).set({ status:'PENDING_APPROVAL', moderationReason:null }).where(eq(events.id,existing.id)).returning();
+  return Response.json(updated);
 }

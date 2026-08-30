@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { authService } from '@/features/auth';
+import { EventCardSkeleton, PageLoading } from '@/shared/components/ui/States';
 
 interface EnrichedEvent {
   id: string; title: string; date: string; time: string; location: string;
@@ -62,7 +63,7 @@ function EventsContent() {
       <div className="flex gap-1.5 bg-neutral-900 rounded-xl p-1">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${tab === t.id ? 'bg-[#c4f000] text-black' : 'text-neutral-400'}`}>
+            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${tab === t.id ? 'bg-blue-600 text-white' : 'text-neutral-400'}`}>
             {t.label}
           </button>
         ))}
@@ -70,23 +71,23 @@ function EventsContent() {
 
       {/* Events List */}
       {!loaded ? (
-        <p className="text-neutral-500 text-sm text-center py-8">Loading...</p>
+        <div className="space-y-3"><EventCardSkeleton/><EventCardSkeleton/></div>
       ) : events.length === 0 ? (
         <div className="text-center py-12 space-y-2">
           <p className="text-neutral-500 text-sm">No events here</p>
-          <Link href="/seller/create" className="text-[#c4f000] text-sm">Create one →</Link>
+          <Link href="/seller/create" className="text-[#2563eb] text-sm">Create one →</Link>
         </div>
       ) : (
         <div className="space-y-3">
           {events.map(event => (
-            <Link key={event.id} href={`/seller/events/${event.id}`} className="block bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3 active:scale-[0.98] transition-transform">
+            <Link key={event.id} href={`/seller/events/${event.id}`} className="block surface rounded-2xl p-4 space-y-3 active:scale-[0.98] transition-transform hover:border-blue-400/30">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-white font-semibold text-sm">{event.title}</h3>
                   <p className="text-neutral-500 text-xs mt-0.5">{new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {event.location}</p>
                 </div>
                 <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded border font-medium ${statusColors[event.status] || statusColors.CANCELLED}`}>
-                  {event.status.replace('_', ' ')}
+                  {event.status === 'CANCELLED' ? 'CLOSED' : event.status.replace('_', ' ')}
                 </span>
               </div>
 
@@ -94,10 +95,10 @@ function EventsContent() {
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-neutral-400">{event.totalSold}/{event.totalCapacity} sold</span>
-                  <span className="text-[#c4f000]">{event.sellPercentage}%</span>
+                  <span className="text-[#2563eb]">{event.sellPercentage}%</span>
                 </div>
                 <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#c4f000] rounded-full transition-all" style={{ width: `${Math.min(event.sellPercentage, 100)}%` }} />
+                  <div className="h-full bg-[#2563eb] rounded-full transition-all" style={{ width: `${Math.min(event.sellPercentage, 100)}%` }} />
                 </div>
               </div>
 
@@ -117,7 +118,7 @@ function EventsContent() {
 
 export default function SellerEventsPage() {
   return (
-    <Suspense fallback={<div className="px-4 pt-6"><p className="text-neutral-500">Loading...</p></div>}>
+    <Suspense fallback={<PageLoading message="Opening event studio…" />}>
       <EventsContent />
     </Suspense>
   );

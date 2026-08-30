@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PageLoading } from '@/shared/components/ui/States';
 
 function VerifyContent() {
   const searchParams = useSearchParams();
@@ -44,15 +45,10 @@ function VerifyContent() {
   }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-5">
+    <div className="min-h-screen app-shell flex items-center justify-center px-5">
       <div className="text-center space-y-4 max-w-sm">
         {status === 'loading' && (
-          <>
-            <div className="w-12 h-12 mx-auto bg-[#c4f000] rounded-xl flex items-center justify-center animate-pulse">
-              <span className="text-black font-black text-lg">P</span>
-            </div>
-            <p className="text-neutral-400 text-sm">{message}</p>
-          </>
+          <PageLoading message={message} />
         )}
         {status === 'success' && (
           <>
@@ -70,7 +66,7 @@ function VerifyContent() {
             </div>
             <h2 className="text-white text-xl font-bold">Verification Failed</h2>
             <p className="text-neutral-400 text-sm">{message}</p>
-            <Link href="/sign-up" className="inline-block text-[#c4f000] text-sm hover:underline">Try signing up again</Link>
+            <Link href="/sign-up" className="inline-block text-[#2563eb] text-sm hover:underline">Try signing up again</Link>
           </>
         )}
       </div>
@@ -80,7 +76,7 @@ function VerifyContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center"><p className="text-neutral-500">Loading...</p></div>}>
+    <Suspense fallback={<PageLoading message="Checking verification link…" />}>
       <VerifyContent />
     </Suspense>
   );

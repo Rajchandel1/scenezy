@@ -46,12 +46,36 @@ export const events = pgTable('events', {
   sellerName: text('seller_name').notNull(),
   status: eventStatusEnum('status').notNull().default('PENDING_APPROVAL'),
   posterUrl: text('poster_url'),
+  moderationReason: text('moderation_reason'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   sellerIdx: index('events_seller_idx').on(table.sellerId),
   statusIdx: index('events_status_idx').on(table.status),
   dateIdx: index('events_date_idx').on(table.date),
 }));
+
+// Admin-managed discovery taxonomy and user-home composition.
+export const categories = pgTable('categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  active: boolean('active').notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const homeSections = pgTable('home_sections', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  eyebrow: text('eyebrow').default(''),
+  layout: text('layout').notNull().default('FEATURE'),
+  eventIds: jsonb('event_ids').$type<string[]>().notNull().default([]),
+  active: boolean('active').notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
 // ============================================
 // PASS TYPES (per event)
@@ -109,6 +133,8 @@ export const orders = pgTable('orders', {
   paymentStatus: paymentStatusEnum('payment_status').notNull().default('PENDING'),
   orderStatus: orderStatusEnum('order_status').notNull().default('CREATED'),
   transactionId: text('transaction_id'),
+  providerOrderId: text('provider_order_id').unique(),
+  idempotencyKey: text('idempotency_key').unique(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   userIdx: index('orders_user_idx').on(table.userId),

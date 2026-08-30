@@ -4,6 +4,8 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { authService } from '@/features/auth';
+import { LoadingButton } from '@/shared/components/ui/LoadingButton';
+import { Spinner } from '@/shared/components/ui/States';
 
 function SignUpContent() {
   const router = useRouter();
@@ -14,7 +16,7 @@ function SignUpContent() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [showVerification, setShowVerification] = useState(false);
+  const [showVerification] = useState(false);
   const [resending, setResending] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,11 +26,9 @@ function SignUpContent() {
     try {
       const result = await authService.register({ ...form, role });
       
-      if (result.needsVerification) {
-        setShowVerification(true);
-      } else {
+      if (!result.needsVerification) {
         // No email confirmation needed - go to callback to create DB entry
-        router.push('/auth/callback');
+        router.push(redirect || '/auth/callback');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -59,15 +59,15 @@ function SignUpContent() {
   if (showVerification) {
     return (
       <div className="space-y-5 text-center py-4">
-        <div className="w-16 h-16 mx-auto rounded-full bg-[#c4f000]/10 border border-[#c4f000]/30 flex items-center justify-center">
-          <svg className="w-8 h-8 text-[#c4f000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-16 h-16 mx-auto rounded-full bg-[#2563eb]/10 border border-[#2563eb]/30 flex items-center justify-center">
+          <svg className="w-8 h-8 text-[#2563eb]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
         <div className="space-y-2">
           <h2 className="text-white text-xl font-bold">Check your email</h2>
           <p className="text-neutral-400 text-sm">We sent a verification link to</p>
-          <p className="text-[#c4f000] font-medium text-sm">{form.email}</p>
+          <p className="text-[#2563eb] font-medium text-sm">{form.email}</p>
           <p className="text-neutral-500 text-xs mt-2">Click the link to activate your account.</p>
         </div>
         <div className="space-y-2 pt-2">
@@ -75,7 +75,7 @@ function SignUpContent() {
             className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 font-medium py-3 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 text-sm">
             {resending ? 'Sent! Check inbox ✓' : 'Resend verification email'}
           </button>
-          <Link href="/sign-in" className="block text-neutral-500 text-sm hover:text-[#c4f000] transition-colors">
+          <Link href="/sign-in" className="block text-neutral-500 text-sm hover:text-[#2563eb] transition-colors">
             ← Back to sign in
           </Link>
         </div>
@@ -89,7 +89,7 @@ function SignUpContent() {
       <button onClick={handleGoogleSignUp} disabled={googleLoading}
         className="w-full flex items-center justify-center gap-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-white font-medium py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50">
         {googleLoading ? (
-          <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+          <Spinner size="sm" className="text-current" />
         ) : (
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -113,13 +113,13 @@ function SignUpContent() {
         <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider">I want to</label>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => setRole('USER')}
-            className={`p-3 rounded-xl border text-left transition-all ${role === 'USER' ? 'border-[#c4f000] bg-[#c4f000]/5' : 'border-neutral-800 bg-neutral-900'}`}>
-            <span className={`text-sm font-semibold block ${role === 'USER' ? 'text-[#c4f000]' : 'text-white'}`}>Buy Passes</span>
+            className={`p-3 rounded-xl border text-left transition-all ${role === 'USER' ? 'border-[#2563eb] bg-[#2563eb]/5' : 'border-neutral-800 bg-neutral-900'}`}>
+            <span className={`text-sm font-semibold block ${role === 'USER' ? 'text-[#2563eb]' : 'text-white'}`}>Buy Passes</span>
             <span className="text-neutral-500 text-[11px]">Discover & attend events</span>
           </button>
           <button type="button" onClick={() => setRole('SELLER')}
-            className={`p-3 rounded-xl border text-left transition-all ${role === 'SELLER' ? 'border-[#c4f000] bg-[#c4f000]/5' : 'border-neutral-800 bg-neutral-900'}`}>
-            <span className={`text-sm font-semibold block ${role === 'SELLER' ? 'text-[#c4f000]' : 'text-white'}`}>Sell Passes</span>
+            className={`p-3 rounded-xl border text-left transition-all ${role === 'SELLER' ? 'border-[#2563eb] bg-[#2563eb]/5' : 'border-neutral-800 bg-neutral-900'}`}>
+            <span className={`text-sm font-semibold block ${role === 'SELLER' ? 'text-[#2563eb]' : 'text-white'}`}>Sell Passes</span>
             <span className="text-neutral-500 text-[11px]">Create & manage events</span>
           </button>
         </div>
@@ -130,36 +130,36 @@ function SignUpContent() {
         <div className="space-y-1.5">
           <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider">Name</label>
           <input type="text" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] focus:ring-1 focus:ring-[#c4f000] transition-all"
+            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] transition-all"
             placeholder="Your name" />
         </div>
         <div className="space-y-1.5">
           <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider">Email</label>
           <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] focus:ring-1 focus:ring-[#c4f000] transition-all"
+            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] transition-all"
             placeholder="you@example.com" />
         </div>
         <div className="space-y-1.5">
           <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider">Password</label>
           <input type="password" required minLength={6} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#c4f000] focus:ring-1 focus:ring-[#c4f000] transition-all"
+            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] transition-all"
             placeholder="Min 6 characters" />
         </div>
         {error && <div className="bg-red-950/30 border border-red-900/50 text-red-400 text-sm rounded-xl px-4 py-3">{error}</div>}
-        <button type="submit" disabled={loading}
-          className="w-full bg-[#c4f000] hover:bg-[#b8e600] text-black font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? 'Creating account...' : 'Create Account'}
-        </button>
+        <LoadingButton type="submit" loading={loading} loadingLabel="Creating account…"
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-blue-700/20 transition-all active:scale-[0.98]">
+          Create Account
+        </LoadingButton>
       </form>
 
-      <p className="text-center text-neutral-500 text-sm">Already have an account? <Link href="/sign-in" className="text-[#c4f000] hover:underline font-medium">Sign in</Link></p>
+      <p className="text-center text-neutral-500 text-sm">Already have an account? <Link href="/sign-in" className="text-[#2563eb] hover:underline font-medium">Sign in</Link></p>
     </div>
   );
 }
 
 export default function SignUpPage() {
   return (
-    <Suspense fallback={<div className="text-neutral-500 text-center">Loading...</div>}>
+    <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="md" /></div>}>
       <SignUpContent />
     </Suspense>
   );

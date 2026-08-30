@@ -46,7 +46,7 @@ export default function AuthCallbackPage() {
             // Create a pseudo-session scenario
             const user = userData.user;
             const name = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
-            const role = user.user_metadata?.role || 'USER';
+            const role = (user.user_metadata?.role || 'USER') as 'USER' | 'SELLER' | 'ADMIN';
             
             await authService.completeRegistration(user.id, user.email!, name, role);
             
@@ -67,7 +67,7 @@ export default function AuthCallbackPage() {
         setStatus('Setting up your account...');
         const user = session.user;
         const name = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
-        const role = user.user_metadata?.role || 'USER';
+        const role = (user.user_metadata?.role || 'USER') as 'USER' | 'SELLER' | 'ADMIN';
 
         await authService.completeRegistration(user.id, user.email!, name, role);
 
@@ -88,7 +88,7 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-5">
+    <div className="min-h-screen app-shell flex items-center justify-center px-5">
       <div className="text-center space-y-4">
         {error ? (
           <>
@@ -100,7 +100,7 @@ export default function AuthCallbackPage() {
           </>
         ) : (
           <>
-            <div className="w-10 h-10 mx-auto bg-[#c4f000] rounded-xl flex items-center justify-center animate-pulse">
+            <div className="w-10 h-10 mx-auto bg-[#2563eb] rounded-xl flex items-center justify-center animate-pulse">
               <span className="text-black font-black">P</span>
             </div>
             <p className="text-neutral-400 text-sm">{status}</p>

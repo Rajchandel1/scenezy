@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { ThemeProvider } from '@/shared/components/theme/ThemeProvider';
+import { PWARegister } from '@/shared/components/layout/PWARegister';
 
 export const metadata: Metadata = {
-  title: 'Scenezy - Event Passes Made Simple',
-  description: 'Discover events, buy passes, show QR at entry.',
+  title: 'Scenezy — Discover Events & Manage Passes',
+  description: 'Discover events, book passes and manage entry with Scenezy.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0a0a0a',
+  themeColor: '#050816',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -23,14 +25,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('scenezy_theme')||'system';var r=t==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t;document.documentElement.dataset.theme=r;document.documentElement.style.colorScheme=r}catch(e){}})()` }} />
+        <link rel="apple-touch-icon" href="/scenezy-logo.png?v=2" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="bg-[#0a0a0a] text-white antialiased min-h-screen">
-        {children}
+      <body className="text-white antialiased min-h-screen">
+        <ThemeProvider><PWARegister/>{children}</ThemeProvider>
       </body>
     </html>
   );

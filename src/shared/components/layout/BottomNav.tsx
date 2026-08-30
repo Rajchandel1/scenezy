@@ -30,17 +30,17 @@ export function BottomNav() {
   const navItems = role === 'SELLER' ? sellerNav : consumerNav;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-neutral-800 z-50">
-      <div className="max-w-lg mx-auto flex justify-around items-center h-16 px-2">
+    <nav className="app-nav fixed bottom-0 left-0 right-0 border-t z-50 safe-area-bottom">
+      <div className="max-w-xl mx-auto flex justify-around items-center h-[5rem] px-4">
         {navItems.map(item => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           return (
             <Link key={item.href} href={item.href}
-              className={`flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-all ${isActive ? 'text-[#c4f000]' : 'text-neutral-500 hover:text-neutral-300'}`}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              className={`relative flex flex-col items-center justify-center flex-1 h-16 transition-all ${isActive ? 'text-[var(--forest)]' : 'text-[var(--muted)]'}`}>
+              <span className={`w-12 h-8 rounded-xl grid place-items-center transition-all ${isActive ? 'brand-button' : ''}`}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-              </svg>
-              <span className={`text-[10px] mt-1 font-medium ${isActive ? 'text-[#c4f000]' : ''}`}>{item.label}</span>
+              </svg></span>
+              <span className="text-[10px] mt-1 font-semibold">{item.label}</span>
             </Link>
           );
         })}

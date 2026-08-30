@@ -1,5 +1,5 @@
 import { createSupabaseBrowserClient } from '@/shared/lib/supabase-client';
-import { AuthUser, LoginInput, RegisterInput } from '../types';
+import { AuthUser, LoginInput, RegisterInput, UserRole } from '../types';
 
 const SESSION_KEY = 'pass_session_user';
 
@@ -18,17 +18,11 @@ export class SupabaseAuthService {
     if (error) throw new Error(error.message.includes('Invalid') ? 'Invalid email or password' : error.message);
     if (!data.user) throw new Error('Login failed');
 
-    // Check our DB for email_verified
     const { data: profile } = await supabase
       .from('users')
       .select('role, name, email_verified')
       .eq('id', data.user.id)
       .single();
-
-    if (profile && !profile.email_verified) {
-      await supabase.auth.signOut();
-      throw new Error('Please verify your email first. Check your inbox.');
-    }
 
     const user: AuthUser = {
       id: data.user.id,
@@ -59,44 +53,19 @@ export class SupabaseAuthService {
     if (error) throw new Error(error.message);
     if (!data.user) throw new Error('Registration failed');
 
-    await supabase.from('users').upsert({
-      id: data.user.id,
-      email: input.email,
-      name: input.name,
-      role: input.role || 'USER',
-      email_verified: false,
-    }, { onConflict: 'id' });
+    const profileResponse = await fetch('/api/data/profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: input.name }),
+    });
+    if (!profileResponse.ok) throw new Error('Account was created, but the profile could not be set up. Please sign in again.');
 
-    // Send verification email
-    try {
-      await fetch('/api/data/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'send-verification',
-          userId: data.user.id,
-          email: input.email,
-          name: input.name,
-        }),
-      });
-    } catch (err) {
-      console.error('[Auth] Failed to send verification email:', err);
-    }
-
-    await supabase.auth.signOut();
-    return { needsVerification: true };
+    return { needsVerification: false };
   }
 
-  async completeRegistration(userId: string, email: string, name: string, role: string): Promise<AuthUser> {
-    const supabase = this.getClient();
-
-    await supabase.from('users').upsert({
-      id: userId,
-      email,
-      name,
-      role,
-      email_verified: true,
-    }, { onConflict: 'id' });
+  async completeRegistration(userId: string, email: string, name: string, role: UserRole): Promise<AuthUser> {
+    const profileResponse = await fetch('/api/data/profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+    });
+    if (!profileResponse.ok) throw new Error('Could not finish setting up your profile.');
 
     const user: AuthUser = { id: userId, email, name, role, createdAt: new Date().toISOString() };
     
@@ -151,7 +120,7 @@ export class SupabaseAuthService {
         session.user.id,
         session.user.email!,
         session.user.user_metadata?.name || session.user.email!.split('@')[0],
-        session.user.user_metadata?.role || 'USER'
+        (session.user.user_metadata?.role || 'USER') as UserRole
       );
     }
 
