@@ -18,15 +18,15 @@ Open `http://localhost:3000`. Fill in `.env.local` before testing authentication
 
 Copy `.env.example` and configure these values in both local development and Vercel:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `DATABASE_URL` (prefer the Supabase transaction pooler for serverless deployments)
 - `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`
-- `NEXT_PUBLIC_APP_URL`
+- `APP_URL`
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` if Google OAuth is enabled
 
-For production, set `NEXT_PUBLIC_APP_URL` to the final HTTPS Vercel domain. Also add that domain and `/auth/callback` URL to the allowed redirect URLs in Supabase authentication settings.
+For production, set `APP_URL` to the final HTTPS Vercel domain. Also add that domain and `/auth/callback` URL to the allowed redirect URLs in Supabase authentication settings.
 
 ## Quality checks
 
@@ -57,7 +57,7 @@ Review `git status` before committing. `.env*`, `.next`, `node_modules`, and `.v
 1. In Vercel, select **Add New > Project** and import the GitHub repository.
 2. Vercel should detect **Next.js**. Keep the default build command (`npm run build`) and output settings.
 3. Add every environment variable listed above for Production (and Preview if needed).
-4. Deploy, then update `NEXT_PUBLIC_APP_URL` to the assigned production domain and redeploy.
+4. Deploy, then update `APP_URL` to the assigned production domain and redeploy.
 5. Add the production callback URL to Supabase and your Google OAuth configuration.
 
 No `vercel.json` is required; this app uses the standard Next.js deployment configuration.

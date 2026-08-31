@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       VALUES (${userId}, ${token}, 'email_verify', ${expiresAt})
     `);
 
-    const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`;
+    const verifyUrl = `${process.env.APP_URL}/verify-email?token=${token}`;
     await sendEmail(email, 'Verify your email - PASS', verificationEmail(name, verifyUrl));
 
     return Response.json({ success: true });
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       VALUES (${user.id}, ${token}, 'password_reset', ${expiresAt})
     `);
 
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
+    const resetUrl = `${process.env.APP_URL}/reset-password?token=${token}`;
     await sendEmail(email, 'Reset your password - PASS', passwordResetEmail(user.name, resetUrl));
 
     return Response.json({ success: true });
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   // SEND PURCHASE CONFIRMATION
   if (action === 'send-purchase') {
     const { email, name, eventTitle, count } = body;
-    const passesUrl = `${process.env.NEXT_PUBLIC_APP_URL}/passes`;
+    const passesUrl = `${process.env.APP_URL}/passes`;
     await sendEmail(email, `You're going to ${eventTitle}! 🎉`, purchaseEmail(name, eventTitle, count, passesUrl));
     return Response.json({ success: true });
   }

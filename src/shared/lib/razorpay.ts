@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 const apiBase = 'https://api.razorpay.com/v1';
 
 function credentials() {
-  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+  const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (!keyId || !keySecret) throw new Error('RAZORPAY_NOT_CONFIGURED');
   return { keyId, keySecret };

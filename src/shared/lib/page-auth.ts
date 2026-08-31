@@ -10,7 +10,7 @@ const homeForRole=(role:Role)=>role==='ADMIN'?'/admin':role==='SELLER'?'/seller'
 
 export async function requirePageRole(allowed:Role[]){
   const store=await cookies();
-  const supabase=createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,{cookies:{getAll:()=>store.getAll(),setAll:()=>undefined}});
+  const supabase=createServerClient(process.env.SUPABASE_URL!,process.env.SUPABASE_ANON_KEY!,{cookies:{getAll:()=>store.getAll(),setAll:()=>undefined}});
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)redirect('/sign-in');
   const [profile]=await db.select({id:users.id,role:users.role,suspended:users.suspended}).from(users).where(eq(users.id,user.id)).limit(1);
@@ -21,7 +21,7 @@ export async function requirePageRole(allowed:Role[]){
 
 export async function redirectAuthenticated(){
   const store=await cookies();
-  const supabase=createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,{cookies:{getAll:()=>store.getAll(),setAll:()=>undefined}});
+  const supabase=createServerClient(process.env.SUPABASE_URL!,process.env.SUPABASE_ANON_KEY!,{cookies:{getAll:()=>store.getAll(),setAll:()=>undefined}});
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)return;
   const [profile]=await db.select({role:users.role,suspended:users.suspended}).from(users).where(eq(users.id,user.id)).limit(1);

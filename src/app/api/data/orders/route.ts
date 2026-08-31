@@ -39,7 +39,7 @@ export async function POST(req:NextRequest){
     const [existing]=await db.select().from(orders).where(eq(orders.idempotencyKey,idempotencyKey)).limit(1);
     if(existing){
       if(existing.userId!==auth.profile.id)return Response.json({error:'Checkout key conflict'},{status:409});
-      return Response.json({order:existing,providerOrderId:existing.providerOrderId,keyId:process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID});
+      return Response.json({order:existing,providerOrderId:existing.providerOrderId,keyId:process.env.RAZORPAY_KEY_ID});
     }
 
     const [event]=await db.select().from(events).where(and(eq(events.id,body.eventId),eq(events.status,'ACTIVE'))).limit(1);
@@ -54,7 +54,7 @@ export async function POST(req:NextRequest){
     const localId=crypto.randomUUID();
     const providerOrder=await createRazorpayOrder(total,`scn_${localId.replaceAll('-','').slice(0,28)}`,{scenezy_order_id:localId,user_id:auth.profile.id,event_id:event.id});
     const [created]=await db.insert(orders).values({id:localId,userId:auth.profile.id,eventId:event.id,eventTitle:event.title,items:normalized,subtotal,fees,total,paymentStatus:'PENDING',orderStatus:'CREATED',providerOrderId:providerOrder.id,idempotencyKey}).returning();
-    return Response.json({order:created,providerOrderId:providerOrder.id,keyId:process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID},{status:201});
+    return Response.json({order:created,providerOrderId:providerOrder.id,keyId:process.env.RAZORPAY_KEY_ID},{status:201});
   }catch(error){
     console.error('[Checkout]',error);
     const message=error instanceof Error&&error.message==='RAZORPAY_NOT_CONFIGURED'?'Razorpay is not configured':'Checkout could not be completed';

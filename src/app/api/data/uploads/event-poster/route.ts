@@ -13,7 +13,7 @@ export async function GET(request:Request){
   if(auth.error)return auth.error;
   const path=new URL(request.url).searchParams.get('path')||'';
   if(!/^[0-9a-f-]{36}\/\d{4}-\d{2}\/[0-9a-f-]{36}\.(?:jpg|png|webp)$/i.test(path))return Response.json({error:'Invalid poster path'},{status:400});
-  const supabase=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
+  const supabase=createClient(process.env.SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data,error}=await supabase.storage.from('event-posters').createSignedUrl(path,3600);
   if(error||!data?.signedUrl)return Response.json({error:'Poster is unavailable'},{status:404});
   return new Response(null,{status:307,headers:{Location:data.signedUrl,'Cache-Control':'private, max-age=3300'}});
@@ -31,7 +31,7 @@ export async function POST(request:Request){
     if(!type)return Response.json({error:'Use a JPG, PNG or WebP image'},{status:400});
     const bytes=new Uint8Array(await file.arrayBuffer());
     if(!type.signature(bytes))return Response.json({error:'The selected file is not a valid image'},{status:400});
-    const supabase=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
+    const supabase=createClient(process.env.SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
     const month=new Date().toISOString().slice(0,7),path=`${auth.profile.id}/${month}/${crypto.randomUUID()}.${type.extension}`;
     const {error}=await supabase.storage.from('event-posters').upload(path,bytes,{contentType:file.type,cacheControl:'31536000',upsert:false});
     if(error){console.error('[Poster upload]',error);return Response.json({error:error.message.includes('Bucket not found')?'Storage bucket event-posters is not configured':'Poster upload failed'},{status:500});}
@@ -45,7 +45,7 @@ export async function DELETE(request:Request){
   try{
     const path=String((await request.json()).path||'');
     if(!path.startsWith(`${auth.profile.id}/`))return Response.json({error:'Invalid poster path'},{status:403});
-    const supabase=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
+    const supabase=createClient(process.env.SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
     const {error}=await supabase.storage.from('event-posters').remove([path]);
     if(error)throw error;
     return Response.json({success:true});

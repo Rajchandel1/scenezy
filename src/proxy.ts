@@ -12,7 +12,7 @@ function getProfile(userId:string){
   const cached=profileCache.get(userId),now=Date.now();
   if(cached&&cached.expires>now)return cached.value;
   const value=(async()=>{
-    const admin=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
+    const admin=createClient(process.env.SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
     const {data,error}=await admin.from('users').select('id, email, name, role, approved, suspended').eq('id',userId).single();
     return error?null:data as AuthProfile;
   })();
@@ -23,7 +23,7 @@ function getProfile(userId:string){
 export async function proxy(request:NextRequest){
   const {pathname}=request.nextUrl;
   let response=NextResponse.next({request});
-  const supabase=createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,{cookies:{getAll:()=>request.cookies.getAll(),setAll(cookies){cookies.forEach(({name,value})=>request.cookies.set(name,value));response=NextResponse.next({request});cookies.forEach(({name,value,options})=>response.cookies.set(name,value,options));}}});
+  const supabase=createServerClient(process.env.SUPABASE_URL!,process.env.SUPABASE_ANON_KEY!,{cookies:{getAll:()=>request.cookies.getAll(),setAll(cookies){cookies.forEach(({name,value})=>request.cookies.set(name,value));response=NextResponse.next({request});cookies.forEach(({name,value,options})=>response.cookies.set(name,value,options));}}});
   const {data:claimData}=await supabase.auth.getClaims();
   const subject=claimData?.claims?.sub;
   const user=subject?{id:subject}:null;
