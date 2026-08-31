@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { PassLogo } from '@/shared/components/branding/PassLogo';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/shared/lib/supabase-client';
 import { authService } from '@/features/auth';
@@ -100,9 +101,7 @@ export default function AuthCallbackPage() {
           </>
         ) : (
           <>
-            <div className="w-10 h-10 mx-auto bg-[#2563eb] rounded-xl flex items-center justify-center animate-pulse">
-              <span className="text-black font-black">P</span>
-            </div>
+            <PassLogo className="w-14 h-14 mx-auto animate-pulse"/>
             <p className="text-neutral-400 text-sm">{status}</p>
           </>
         )}

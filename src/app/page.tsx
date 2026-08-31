@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/features/auth';
 import LandingPage from './(marketing)/page';
+import { PassLogo } from '@/shared/components/branding/PassLogo';
 
 export default function RootPage() {
   const router = useRouter();
@@ -28,9 +29,7 @@ export default function RootPage() {
   if (checking) {
     return (
       <div className="min-h-screen app-shell flex items-center justify-center">
-        <div className="w-8 h-8 bg-[#2563eb] rounded-lg flex items-center justify-center animate-pulse">
-          <span className="text-black font-black text-sm">P</span>
-        </div>
+        <PassLogo className="w-14 h-14 animate-pulse"/>
       </div>
     );
   }

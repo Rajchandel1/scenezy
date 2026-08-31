@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { PassLogo } from '@/shared/components/branding/PassLogo';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -39,11 +40,9 @@ export function InstallPrompt() {
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
       <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 shadow-2xl flex items-center gap-3 max-w-sm mx-auto">
-        <div className="w-10 h-10 bg-[#2563eb] rounded-xl flex items-center justify-center shrink-0">
-          <span className="text-black font-black text-lg">P</span>
-        </div>
+        <PassLogo className="w-10 h-10"/>
         <div className="flex-1 min-w-0">
-          <p className="text-white text-sm font-semibold">Install PASS App</p>
+          <p className="text-white text-sm font-semibold">Install Scenezy</p>
           <p className="text-neutral-500 text-xs truncate">Add to home screen for quick access</p>
         </div>
         <button 

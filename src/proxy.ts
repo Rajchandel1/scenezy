@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS=['/','/sign-in','/sign-up','/forgot-password','/reset-password','/verify-email','/auth/callback','/claim','/api/data/auth','/api/data/forgot-password'];
+const PUBLIC_PATHS=['/','/sign-in','/sign-up','/forgot-password','/reset-password','/verify-email','/auth/callback','/claim','/api/data/auth','/api/data/profile','/api/data/forgot-password'];
 const isPublic=(pathname:string)=>PUBLIC_PATHS.some(path=>pathname===path||(path!=='/'&&pathname.startsWith(`${path}/`)));
 const homeForRole=(role?:string)=>role==='ADMIN'?'/admin':role==='SELLER'?'/seller':'/home';
 type AuthProfile={id:string;email:string;name:string;role:string;approved:boolean|null;suspended:boolean|null};
@@ -22,13 +22,14 @@ function getProfile(userId:string){
 
 export async function proxy(request:NextRequest){
   const {pathname}=request.nextUrl;
+  const profileBootstrap=pathname==='/api/data/profile';
   let response=NextResponse.next({request});
   const supabase=createServerClient(process.env.SUPABASE_URL!,process.env.SUPABASE_ANON_KEY!,{cookies:{getAll:()=>request.cookies.getAll(),setAll(cookies){cookies.forEach(({name,value})=>request.cookies.set(name,value));response=NextResponse.next({request});cookies.forEach(({name,value,options})=>response.cookies.set(name,value,options));}}});
   const {data:claimData}=await supabase.auth.getClaims();
   const subject=claimData?.claims?.sub;
   const user=subject?{id:subject}:null;
   let role:string|undefined,profile:AuthProfile|null=null,accountAvailable=Boolean(user);
-  if(user){
+  if(user&&!profileBootstrap){
     profile=await getProfile(user.id);role=profile?.role;accountAvailable=Boolean(profile)&&!profile?.suspended;
   }
   const authenticatedResponse=()=>{

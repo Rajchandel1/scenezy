@@ -18,11 +18,17 @@ export class SupabaseAuthService {
     if (error) throw new Error(error.message.includes('Invalid') ? 'Invalid email or password' : error.message);
     if (!data.user) throw new Error('Login failed');
 
-    const { data: profile } = await supabase
+    const { data: existingProfile } = await supabase
       .from('users')
       .select('role, name, email_verified')
       .eq('id', data.user.id)
       .single();
+    let profile=existingProfile;
+    if(!profile){
+      const response=await fetch('/api/data/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:data.user.user_metadata?.name||data.user.email!.split('@')[0]})});
+      if(!response.ok){const result=await response.json().catch(()=>null);throw new Error(result?.error||'Your account profile could not be restored.');}
+      profile=await response.json();
+    }
 
     const user: AuthUser = {
       id: data.user.id,
@@ -52,11 +58,12 @@ export class SupabaseAuthService {
 
     if (error) throw new Error(error.message);
     if (!data.user) throw new Error('Registration failed');
+    if(!data.session)return {needsVerification:true};
 
     const profileResponse = await fetch('/api/data/profile', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: input.name }),
     });
-    if (!profileResponse.ok) throw new Error('Account was created, but the profile could not be set up. Please sign in again.');
+    if(!profileResponse.ok){const result=await profileResponse.json().catch(()=>null);throw new Error(result?.error||'Account profile could not be created.');}
 
     return { needsVerification: false };
   }

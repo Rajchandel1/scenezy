@@ -16,7 +16,7 @@ function SignUpContent() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [showVerification] = useState(false);
+  const [showVerification,setShowVerification] = useState(false);
   const [resending, setResending] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,7 +29,7 @@ function SignUpContent() {
       if (!result.needsVerification) {
         // No email confirmation needed - go to callback to create DB entry
         router.push(redirect || '/auth/callback');
-      }
+      }else setShowVerification(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
