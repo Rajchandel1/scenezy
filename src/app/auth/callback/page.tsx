@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PassLogo } from '@/shared/components/branding/PassLogo';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/shared/lib/supabase-client';
@@ -8,10 +8,14 @@ import { authService } from '@/features/auth';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const started = useRef(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('Processing...');
 
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+
     async function handleCallback() {
       try {
         const supabase = createSupabaseBrowserClient();
@@ -32,7 +36,13 @@ export default function AuthCallbackPage() {
             const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
             if (exchangeError) {
               console.error('[Auth Callback] Exchange error:', exchangeError);
-              // Don't fail yet - maybe session exists anyway
+              // Another callback execution may already have consumed the
+              // one-time code. Re-read the shared browser session before failing.
+              for (let attempt = 0; attempt < 5 && !session; attempt += 1) {
+                await new Promise(resolve => setTimeout(resolve, 150));
+                const result = await supabase.auth.getSession();
+                session = result.data.session;
+              }
             } else {
               session = data.session;
             }
@@ -49,11 +59,12 @@ export default function AuthCallbackPage() {
             const name = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
             const role = (user.user_metadata?.role || 'USER') as 'USER' | 'SELLER' | 'ADMIN';
             
-            await authService.completeRegistration(user.id, user.email!, name, role);
+            const registeredUser = await authService.completeRegistration(user.id, user.email!, name, role);
             
-            if (role === 'ADMIN') router.replace('/admin');
-            else if (role === 'SELLER') router.replace('/seller');
+            if (registeredUser.role === 'ADMIN') router.replace('/admin');
+            else if (registeredUser.role === 'SELLER') router.replace('/seller');
             else router.replace('/home');
+            router.refresh();
             return;
           }
         }
@@ -70,13 +81,14 @@ export default function AuthCallbackPage() {
         const name = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
         const role = (user.user_metadata?.role || 'USER') as 'USER' | 'SELLER' | 'ADMIN';
 
-        await authService.completeRegistration(user.id, user.email!, name, role);
+        const registeredUser = await authService.completeRegistration(user.id, user.email!, name, role);
 
         // Redirect based on role
         setStatus('Redirecting...');
-        if (role === 'ADMIN') router.replace('/admin');
-        else if (role === 'SELLER') router.replace('/seller');
+        if (registeredUser.role === 'ADMIN') router.replace('/admin');
+        else if (registeredUser.role === 'SELLER') router.replace('/seller');
         else router.replace('/home');
+        router.refresh();
 
       } catch (err) {
         console.error('[Auth Callback] Error:', err);

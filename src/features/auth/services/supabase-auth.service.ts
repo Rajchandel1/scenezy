@@ -74,12 +74,29 @@ export class SupabaseAuthService {
 
   async completeRegistration(userId: string, email: string, name: string, role: UserRole): Promise<AuthUser> {
     const { data: { session } } = await this.getClient().auth.getSession();
+    const headers = this.profileRequestHeaders(session?.access_token);
     const profileResponse = await fetch('/api/data/profile', {
       method: 'POST', headers: { 'Content-Type': 'application/json', ...this.profileRequestHeaders(session?.access_token) }, body: JSON.stringify({ name }),
     });
-    if (!profileResponse.ok) throw new Error('Could not finish setting up your profile.');
+    let profile: { role: UserRole; name: string } | null = profileResponse.ok
+      ? await profileResponse.json()
+      : null;
 
-    const user: AuthUser = { id: userId, email, name, role, createdAt: new Date().toISOString() };
+    // The profile bootstrap is idempotent. If its response was interrupted or a
+    // duplicate OAuth callback was rate-limited, verify the row before failing.
+    if (!profile) {
+      const existingResponse = await fetch('/api/data/profile', { cache: 'no-store', headers });
+      if (existingResponse.ok) profile = await existingResponse.json();
+    }
+    if (!profile) throw new Error('Could not finish setting up your profile.');
+
+    const user: AuthUser = {
+      id: userId,
+      email,
+      name: profile.name || name,
+      role: profile.role || role,
+      createdAt: new Date().toISOString(),
+    };
     
     if (typeof window !== 'undefined') {
       localStorage.setItem(SESSION_KEY, JSON.stringify(user));
