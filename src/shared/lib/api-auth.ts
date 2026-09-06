@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { cookies, headers } from 'next/headers';
 import { db } from '@/shared/db';
 import { users } from '@/shared/db/schema';
@@ -6,6 +7,16 @@ import { eq } from 'drizzle-orm';
 
 export async function requireApiUser(roles?: Array<'USER' | 'SELLER' | 'ADMIN'>) {
   const requestHeaders=await headers();
+  const bearerToken=requestHeaders.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if(bearerToken){
+    const supabase=createClient(process.env.SUPABASE_URL!,process.env.SUPABASE_ANON_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
+    const {data:{user},error}=await supabase.auth.getUser(bearerToken);
+    if(error||!user)return {error:Response.json({error:'Authentication required'},{status:401})};
+    const [profile]=await db.select().from(users).where(eq(users.id,user.id)).limit(1);
+    if(!profile||profile.suspended)return {error:Response.json({error:'Account is unavailable'},{status:403})};
+    if(roles&&!roles.includes(profile.role))return {error:Response.json({error:'You do not have permission to do this'},{status:403})};
+    return {user,profile};
+  }
   if(requestHeaders.get('x-scenezy-auth')==='1'){
     const role=requestHeaders.get('x-scenezy-user-role') as 'USER'|'SELLER'|'ADMIN'|null;
     const id=requestHeaders.get('x-scenezy-user-id');

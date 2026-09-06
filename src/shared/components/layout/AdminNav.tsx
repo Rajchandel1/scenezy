@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarDays, LayoutDashboard, PanelsTopLeft, Store, Ticket, Users } from 'lucide-react';
+import { CalendarDays, CircleDollarSign, LayoutDashboard, PanelsTopLeft, Store, Ticket, Users } from 'lucide-react';
 import { PassLogo } from '@/shared/components/branding/PassLogo';
 
 const items = [
@@ -12,6 +12,7 @@ const items = [
   { href: '/admin/sellers', label: 'Sellers', icon: Store },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/passes', label: 'Passes', icon: Ticket },
+  { href: '/admin/payments', label: 'Payments', icon: CircleDollarSign },
 ];
 
 export function AdminNav() {

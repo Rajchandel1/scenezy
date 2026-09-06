@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element -- poster URLs may be signed/proxied at runtime */
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, MapPin } from 'lucide-react';
@@ -14,10 +15,10 @@ interface Section{id:string;title:string;eyebrow:string;layout:'FEATURE'|'GRID'|
 const price=(event:Event)=>event.passes.length?Math.min(...event.passes.map(pass=>pass.price)):0;
 const formatDate=(date:string)=>new Date(date).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
 
-function Artwork({event,className=''}:{event:Event;className?:string}){
+function Artwork({event,className='',eager=false}:{event:Event;className?:string;eager?:boolean}){
   const gradients:Record<string,string>={Music:'linear-gradient(135deg,#21104f,#3158d4 58%,#f28b45)',Party:'linear-gradient(135deg,#4a092b,#c11ca8 55%,#ffc857)',Comedy:'linear-gradient(135deg,#f4bb35,#ed5a24 55%,#641020)',Sports:'linear-gradient(135deg,#07382f,#20a65a 60%,#d3ef55)',Conference:'linear-gradient(135deg,#071226,#1451a8 58%,#4dd8ed)',Workshop:'linear-gradient(135deg,#201a17,#14877c 58%,#f1d76a)'};
   const fallback=gradients[event.category]||'linear-gradient(135deg,#071226,#3158d4 58%,#7d92ff)';
-  return <div className={`overflow-hidden ${className}`} style={{backgroundColor:'#162a68',backgroundImage:fallback}}>{event.posterUrl&&<img src={event.posterUrl} alt="" loading="eager" decoding="async" className="absolute inset-0 h-full w-full object-cover"/>}<div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent"/><div className="absolute -top-16 -right-10 w-48 h-48 rounded-full border-[28px] border-white/10"/><span className="absolute top-4 left-4 text-white/80 text-[9px] font-bold tracking-[.2em] uppercase">{event.category}</span></div>;
+  return <div className={`overflow-hidden ${className}`} style={{backgroundColor:'#162a68',backgroundImage:fallback}}>{event.posterUrl&&<img src={event.posterUrl} alt="" loading={eager?'eager':'lazy'} fetchPriority={eager?'high':'auto'} decoding="async" className="absolute inset-0 h-full w-full object-cover"/>}<div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent"/><div className="absolute -top-16 -right-10 w-48 h-48 rounded-full border-[28px] border-white/10"/><span className="absolute top-4 left-4 text-white/80 text-[9px] font-bold tracking-[.2em] uppercase">{event.category}</span></div>;
 }
 
 function AutoCarousel({children,className='',interval=4200}:{children:ReactNode;className?:string;interval?:number}){

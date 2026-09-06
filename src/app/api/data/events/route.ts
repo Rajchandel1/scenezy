@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/db';
-import { categories, events, passTypes, users } from '@/shared/db/schema';
+import { categories, events, passTypes } from '@/shared/db/schema';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { requireApiUser } from '@/shared/lib/api-auth';
 import { eventPosterUrl } from '@/shared/lib/event-poster';
+import { eventCreateSchema, eventUpdateSchema, validationError } from '@/shared/lib/validation';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -11,6 +12,11 @@ export async function GET(req: NextRequest) {
   const eventId=searchParams.get('id');
   const status = searchParams.get('status');
   const includePending = searchParams.get('includePending');
+
+  if(sellerId||includePending||(status&&status!=='ACTIVE')){
+    const auth=await requireApiUser(['SELLER','ADMIN']);if(auth.error)return auth.error;
+    if(auth.profile.role!=='ADMIN'&&sellerId!==auth.profile.id)return Response.json({error:'Forbidden'},{status:403});
+  }
 
   const conditions: any[] = [];
 
@@ -39,12 +45,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requireApiUser(['SELLER']);
   if (auth.error) return auth.error;
-  const body = await req.json();
+  const parsed=eventCreateSchema.safeParse(await req.json());
+  if(!parsed.success)return validationError(parsed.error);
+  const body=parsed.data;
 
-  // Check if seller is approved
-  const seller = await db.select().from(users).where(eq(users.id, auth.profile.id)).limit(1);
-  if (!seller[0]) return Response.json({ error: 'Seller not found' }, { status: 404 });
-  if (!seller[0].approved) return Response.json({ error: 'Your seller account is not yet approved.' }, { status: 403 });
+  if(new Date(`${body.date}T${body.time}:00+05:30`).getTime()<=Date.now())return Response.json({error:'Event date and time must be in the future'},{status:400});
+
+  if(!auth.profile.approved)return Response.json({error:'Your seller account is not yet approved.'},{status:403});
 
   const requestedCategory=String(body.category||'').trim();
   const [category]=await db.select().from(categories).where(and(eq(categories.name,requestedCategory),eq(categories.active,true))).limit(1);
@@ -87,10 +94,14 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const auth = await requireApiUser(['SELLER']);
   if (auth.error) return auth.error;
-  const body = await req.json();
+  const parsed=eventUpdateSchema.safeParse(await req.json());if(!parsed.success)return validationError(parsed.error);
+  const body = parsed.data;
   const [existing] = await db.select().from(events).where(and(eq(events.id, body.eventId), eq(events.sellerId, auth.profile.id))).limit(1);
   if (!existing) return Response.json({ error:'Event not found' }, { status:404 });
   if (existing.status !== 'REJECTED') return Response.json({ error:'Only rejected events can be resubmitted' }, { status:409 });
-  const [updated] = await db.update(events).set({ status:'PENDING_APPROVAL', moderationReason:null }).where(eq(events.id,existing.id)).returning();
+  if(body.date&&body.time&&new Date(`${body.date}T${body.time}:00+05:30`).getTime()<=Date.now())return Response.json({error:'Event date and time must be in the future'},{status:400});
+  if(body.category){const [category]=await db.select().from(categories).where(and(eq(categories.name,body.category),eq(categories.active,true))).limit(1);if(!category)return Response.json({error:'Choose an available event category'},{status:400});}
+  const {eventId,...changes}=body;
+  const [updated] = await db.update(events).set({ ...changes,status:'PENDING_APPROVAL', moderationReason:null }).where(eq(events.id,eventId)).returning();
   return Response.json(updated);
 }

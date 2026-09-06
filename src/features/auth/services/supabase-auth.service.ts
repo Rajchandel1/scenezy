@@ -8,6 +8,12 @@ export class SupabaseAuthService {
     return createSupabaseBrowserClient();
   }
 
+  private profileRequestHeaders(accessToken?: string): HeadersInit {
+    return {
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    };
+  }
+
   async login(input: LoginInput): Promise<AuthUser> {
     const supabase = this.getClient();
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -18,14 +24,12 @@ export class SupabaseAuthService {
     if (error) throw new Error(error.message.includes('Invalid') ? 'Invalid email or password' : error.message);
     if (!data.user) throw new Error('Login failed');
 
-    const { data: existingProfile } = await supabase
-      .from('users')
-      .select('role, name, email_verified')
-      .eq('id', data.user.id)
-      .single();
-    let profile=existingProfile;
+    let profile: {role:UserRole;name:string}|null=null;
+    const accessToken=data.session?.access_token;
+    const profileResponse=await fetch('/api/data/profile',{cache:'no-store',headers:this.profileRequestHeaders(accessToken)});
+    if(profileResponse.ok)profile=await profileResponse.json();
     if(!profile){
-      const response=await fetch('/api/data/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:data.user.user_metadata?.name||data.user.email!.split('@')[0]})});
+      const response=await fetch('/api/data/profile',{method:'POST',headers:{'Content-Type':'application/json',...this.profileRequestHeaders(accessToken)},body:JSON.stringify({name:data.user.user_metadata?.name||data.user.email!.split('@')[0]})});
       if(!response.ok){const result=await response.json().catch(()=>null);throw new Error(result?.error||'Your account profile could not be restored.');}
       profile=await response.json();
     }
@@ -61,7 +65,7 @@ export class SupabaseAuthService {
     if(!data.session)return {needsVerification:true};
 
     const profileResponse = await fetch('/api/data/profile', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: input.name }),
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...this.profileRequestHeaders(data.session.access_token) }, body: JSON.stringify({ name: input.name }),
     });
     if(!profileResponse.ok){const result=await profileResponse.json().catch(()=>null);throw new Error(result?.error||'Account profile could not be created.');}
 
@@ -69,8 +73,9 @@ export class SupabaseAuthService {
   }
 
   async completeRegistration(userId: string, email: string, name: string, role: UserRole): Promise<AuthUser> {
+    const { data: { session } } = await this.getClient().auth.getSession();
     const profileResponse = await fetch('/api/data/profile', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...this.profileRequestHeaders(session?.access_token) }, body: JSON.stringify({ name }),
     });
     if (!profileResponse.ok) throw new Error('Could not finish setting up your profile.');
 
@@ -116,11 +121,8 @@ export class SupabaseAuthService {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return null;
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role, name, email_verified')
-      .eq('id', session.user.id)
-      .single();
+    const profileResponse=await fetch('/api/data/profile',{cache:'no-store',headers:this.profileRequestHeaders(session.access_token)});
+    let profile: {role:UserRole;name:string}|null=profileResponse.ok?await profileResponse.json():null;
 
     if (!profile) {
       await this.completeRegistration(
@@ -129,6 +131,8 @@ export class SupabaseAuthService {
         session.user.user_metadata?.name || session.user.email!.split('@')[0],
         (session.user.user_metadata?.role || 'USER') as UserRole
       );
+      const restored=await fetch('/api/data/profile',{cache:'no-store',headers:this.profileRequestHeaders(session.access_token)});
+      profile=restored.ok?await restored.json():null;
     }
 
     const user: AuthUser = {
@@ -146,19 +150,7 @@ export class SupabaseAuthService {
   }
 
   async resendVerification(email: string): Promise<void> {
-    const supabase = this.getClient();
-    const { data: userData } = await supabase.from('users').select('id, name').eq('email', email).single();
-    if (!userData) throw new Error('Account not found');
-
-    await fetch('/api/data/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        action: 'send-verification', 
-        userId: userData.id, 
-        email, 
-        name: userData.name 
-      }),
-    });
+    const {error}=await this.getClient().auth.resend({type:'signup',email,options:{emailRedirectTo:`${window.location.origin}/auth/callback`}});
+    if(error)throw error;
   }
 }

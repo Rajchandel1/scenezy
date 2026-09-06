@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { NotificationService, AppNotification } from '@/features/notifications';
 import { authService } from '@/features/auth';
 
@@ -33,12 +31,6 @@ export function NotificationBell() {
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
-    const interval = setInterval(() => loadCount(userId), 10000);
-    return () => clearInterval(interval);
-  }, [userId]);
-
-  useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
     };
@@ -47,14 +39,11 @@ export function NotificationBell() {
   }, []);
 
   const loadCount = async (uid: string) => {
-    const c = await NotificationService.getUnreadCount(uid);
-    setCount(c);
+    try{const c = await NotificationService.getUnreadCount(uid);setCount(c);}catch{setCount(0);}
   };
 
   const loadNotifs = async (uid: string) => {
-    const n = await NotificationService.getNotifications(uid);
-    setNotifs(n);
-    loadCount(uid);
+    try{const n = await NotificationService.getNotifications(uid);setNotifs(n);await loadCount(uid);}catch{setNotifs([]);}
   };
 
   const handleOpen = async () => {

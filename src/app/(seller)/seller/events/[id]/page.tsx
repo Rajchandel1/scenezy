@@ -27,6 +27,7 @@ export default function SellerEventDetailPage() {
   const [data, setData] = useState<any>(null);
   const [loaded, setLoaded] = useState(false);
   const [resubmitting, setResubmitting] = useState(false);
+  const [draft,setDraft]=useState<any>(null),[submitError,setSubmitError]=useState('');
 
   useEffect(() => {
     async function load() {
@@ -34,6 +35,7 @@ export default function SellerEventDetailPage() {
       if (u) {
         const d = await SellerService.getEventDetail(u.id, params.id as string);
         setData(d);
+        setDraft(d?.event?{title:d.event.title,description:d.event.description,date:d.event.date,time:d.event.time,location:d.event.location,venue:d.event.venue,category:d.event.category}:null);
       }
       setLoaded(true);
     }
@@ -45,8 +47,9 @@ export default function SellerEventDetailPage() {
 
   const { event, passBreakdown, buyers, activity } = data;
   const resubmit = async () => {
-    setResubmitting(true);
-    try { const response=await fetch('/api/data/events',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({eventId:event.id})}); if(!response.ok) throw new Error(); setData({...data,event:{...event,status:'PENDING_APPROVAL',moderationReason:null}}); }
+    setResubmitting(true);setSubmitError('');
+    try { const response=await fetch('/api/data/events',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({eventId:event.id,...draft})});const body=await response.json();if(!response.ok)throw new Error(body.error||'Update failed');setData({...data,event:{...event,...draft,status:'PENDING_APPROVAL',moderationReason:null}}); }
+    catch(caught){setSubmitError(caught instanceof Error?caught.message:'Event could not be resubmitted');}
     finally { setResubmitting(false); }
   };
 
@@ -63,7 +66,7 @@ export default function SellerEventDetailPage() {
         </div>
       </div>
 
-      {event.status === 'REJECTED' && <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 space-y-3"><div><p className="text-amber-300 text-sm font-semibold">Changes requested</p><p className="text-neutral-400 text-xs mt-1 leading-relaxed">{event.moderationReason || 'Review your event information before submitting again.'}</p></div><LoadingButton loading={resubmitting} loadingLabel="Resubmitting…" onClick={resubmit} className="bg-blue-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">Submit for another review</LoadingButton></div>}
+      {event.status === 'REJECTED' && draft&&<div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 space-y-3"><div><p className="text-amber-300 text-sm font-semibold">Changes requested</p><p className="text-neutral-400 text-xs mt-1 leading-relaxed">{event.moderationReason || 'Review your event information before submitting again.'}</p></div><div className="grid gap-2"><input className="app-input rounded-xl px-3 py-2 text-sm" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} placeholder="Event title"/><textarea className="app-input rounded-xl px-3 py-2 text-sm resize-none" rows={3} value={draft.description||''} onChange={e=>setDraft({...draft,description:e.target.value})} placeholder="Description"/><div className="grid grid-cols-2 gap-2"><input type="date" className="app-input rounded-xl px-3 py-2 text-sm" value={draft.date} onChange={e=>setDraft({...draft,date:e.target.value})}/><input type="time" className="app-input rounded-xl px-3 py-2 text-sm" value={draft.time} onChange={e=>setDraft({...draft,time:e.target.value})}/></div><div className="grid grid-cols-2 gap-2"><input className="app-input rounded-xl px-3 py-2 text-sm" value={draft.venue} onChange={e=>setDraft({...draft,venue:e.target.value})} placeholder="Venue"/><input className="app-input rounded-xl px-3 py-2 text-sm" value={draft.location} onChange={e=>setDraft({...draft,location:e.target.value})} placeholder="City"/></div></div>{submitError&&<p className="text-red-400 text-xs">{submitError}</p>}<LoadingButton loading={resubmitting} loadingLabel="Resubmitting..." onClick={resubmit} className="bg-blue-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">Save changes and resubmit</LoadingButton></div>}
 
       {/* Revenue Card */}
       <div className="bg-gradient-to-br from-[#2563eb]/10 to-neutral-900 border border-[#2563eb]/20 rounded-xl p-4">

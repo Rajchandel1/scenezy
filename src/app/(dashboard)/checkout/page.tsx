@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { authService, AuthUser } from '@/features/auth';
 import { OrderService } from '@/features/orders';
 import { PageLoading, Spinner } from '@/shared/components/ui/States';
+import Link from 'next/link';
 
 interface CheckoutEvent { id:string; title:string; date:string; time:string; location:string; venue:string; passes:Array<{ id:string; name:string; price:number }> }
 interface RazorpayResult { razorpay_order_id:string; razorpay_payment_id:string; razorpay_signature:string }
@@ -24,10 +25,12 @@ function CheckoutContent() {
   const [error, setError] = useState('');
   const [event, setEvent] = useState<CheckoutEvent | null>(null);
   const [resolving, setResolving] = useState(true);
+  const [accepted,setAccepted]=useState(false);
 
   const eventId = searchParams.get('eventId') || '';
   const passTypeId = searchParams.get('passTypeId') || '';
   const quantity = parseInt(searchParams.get('quantity') || '1');
+  const validQuantity=Number.isInteger(quantity)&&quantity>=1&&quantity<=10;
 
   const passType = event?.passes.find(p => p.id === passTypeId);
 
@@ -45,7 +48,7 @@ function CheckoutContent() {
 
   if (resolving) return <PageLoading message="Preparing checkout…" />;
 
-  if (!event || !passType) {
+  if (!event || !passType||!validQuantity) {
     return (
       <div className="px-4 pt-6 text-center">
         <p className="text-neutral-500">Invalid checkout data</p>
@@ -156,10 +159,12 @@ function CheckoutContent() {
         </div>
       )}
 
+      <label className="editorial-card p-4 flex items-start gap-3 cursor-pointer"><input type="checkbox" checked={accepted} onChange={event=>setAccepted(event.target.checked)} className="mt-0.5 accent-blue-600"/><span className="muted text-xs leading-5">I agree to the <Link href="/terms" target="_blank" className="text-blue-400">booking terms</Link>. Your booking is confirmed after payment succeeds and passes are issued.</span></label>
+
       {/* Pay Button */}
       <button
         onClick={handlePay}
-        disabled={loading}
+        disabled={loading||!accepted}
         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-700/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-base"
       >
         {loading ? (

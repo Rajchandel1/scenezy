@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { authService } from '@/features/auth';
+import { createSupabaseBrowserClient } from '@/shared/lib/supabase-client';
 import { PassCardSkeleton, EmptyState, ErrorState } from '@/shared/components/ui/States';
 import { SearchBar } from '@/shared/components/ui/SearchBar';
 import { FilterTabs } from '@/shared/components/ui/FilterTabs';
@@ -65,10 +65,17 @@ export default function PassesPage() {
     setLoading(true);
     setError('');
     try {
-      const user = await authService.getCurrentUser();
-      if (!user) throw new Error('Not authenticated');
-      
-      const res = await fetch(`/api/data/passes?userId=${user.id}`);
+      const supabase = createSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+
+      // The API derives ownership from the authenticated Supabase session.
+      // Do not trust a cached browser user id here: it can become stale after
+      // signing out and into another account.
+      const res = await fetch('/api/data/passes', {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       if (!res.ok) throw new Error('Failed to load passes');
       setPasses(await res.json());
     } catch {

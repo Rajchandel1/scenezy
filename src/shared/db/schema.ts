@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, integer, boolean, jsonb, uuid, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, integer, boolean, jsonb, uuid, pgEnum, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 // ============================================
 // ENUMS
@@ -7,7 +8,7 @@ export const userRoleEnum = pgEnum('user_role', ['USER', 'SELLER', 'ADMIN']);
 export const passStatusEnum = pgEnum('pass_status', ['ACTIVE', 'USED', 'REVOKED', 'EXPIRED']);
 export const transferStatusEnum = pgEnum('transfer_status', ['PENDING', 'CLAIMED', 'EXPIRED', 'CANCELLED']);
 export const paymentStatusEnum = pgEnum('payment_status', ['PENDING', 'SUCCESS', 'FAILED', 'CANCELLED']);
-export const orderStatusEnum = pgEnum('order_status', ['CREATED', 'PAID', 'FAILED', 'REFUNDED']);
+export const orderStatusEnum = pgEnum('order_status', ['CREATED', 'PAID', 'FAILED']);
 export const eventStatusEnum = pgEnum('event_status', ['PENDING_APPROVAL', 'ACTIVE', 'REJECTED', 'CANCELLED']);
 
 // ============================================
@@ -91,6 +92,10 @@ export const passTypes = pgTable('pass_types', {
   transferAllowed: boolean('transfer_allowed').default(true),
 }, (table) => ({
   eventIdx: index('pass_types_event_idx').on(table.eventId),
+  eventNameUnique:uniqueIndex('pass_types_event_name_unique').on(table.eventId,table.name),
+  priceNonnegative:check('pass_types_price_nonnegative',sql`${table.price} >= 0`),
+  availabilityNonnegative:check('pass_types_availability_nonnegative',sql`${table.available} >= 0`),
+  soldNonnegative:check('pass_types_sold_nonnegative',sql`${table.sold} >= 0`),
 }));
 
 // ============================================
@@ -116,6 +121,7 @@ export const passes = pgTable('passes', {
   credentialIdx: index('passes_credential_idx').on(table.credential),
   statusIdx: index('passes_status_idx').on(table.status),
   eventIdx: index('passes_event_idx').on(table.eventId),
+  ownerStatusDateIdx:index('passes_owner_status_date_idx').on(table.ownerUserId,table.status,table.eventDate),
 }));
 
 // ============================================
@@ -139,6 +145,7 @@ export const orders = pgTable('orders', {
 }, (table) => ({
   userIdx: index('orders_user_idx').on(table.userId),
   eventIdx: index('orders_event_idx').on(table.eventId),
+  totalsNonnegative:check('orders_totals_nonnegative',sql`${table.subtotal} >= 0 and ${table.fees} >= 0 and ${table.total} >= 0`),
 }));
 
 // ============================================
@@ -223,3 +230,43 @@ export const auditLogs = pgTable('audit_logs', {
   actionIdx: index('audit_action_idx').on(table.action),
   createdIdx: index('audit_created_idx').on(table.createdAt),
 }));
+
+export const rateLimits=pgTable('rate_limits',{
+  key:text('key').primaryKey(),
+  count:integer('count').notNull().default(1),
+  resetAt:timestamp('reset_at',{withTimezone:true}).notNull(),
+});
+
+// Seller payments are intentionally isolated from checkout and pass issuance.
+export const sellerPaymentProfiles=pgTable('seller_payment_profiles',{
+  sellerId:uuid('seller_id').primaryKey().references(()=>users.id,{onDelete:'cascade'}),
+  upiId:text('upi_id').notNull(),
+  phone:text('phone'),
+  createdAt:timestamp('created_at',{withTimezone:true}).defaultNow().notNull(),
+  updatedAt:timestamp('updated_at',{withTimezone:true}).defaultNow().notNull(),
+});
+
+export const withdrawalRequests=pgTable('withdrawal_requests',{
+  id:uuid('id').primaryKey().defaultRandom(),
+  sellerId:uuid('seller_id').references(()=>users.id,{onDelete:'cascade'}).notNull(),
+  amount:integer('amount').notNull(),
+  status:text('status').notNull().default('REQUESTED'),
+  sellerNote:text('seller_note'),
+  adminNote:text('admin_note'),
+  paymentReference:text('payment_reference'),
+  requestedAt:timestamp('requested_at',{withTimezone:true}).defaultNow().notNull(),
+  updatedAt:timestamp('updated_at',{withTimezone:true}).defaultNow().notNull(),
+  paidAt:timestamp('paid_at',{withTimezone:true}),
+},table=>({sellerIdx:index('withdrawal_requests_seller_idx').on(table.sellerId,table.requestedAt),statusIdx:index('withdrawal_requests_status_idx').on(table.status,table.requestedAt)}));
+
+export const sellerContactRequests=pgTable('seller_contact_requests',{
+  id:uuid('id').primaryKey().defaultRandom(),
+  sellerId:uuid('seller_id').references(()=>users.id,{onDelete:'cascade'}).notNull(),
+  type:text('type').notNull(),
+  message:text('message').notNull(),
+  phone:text('phone'),
+  status:text('status').notNull().default('OPEN'),
+  adminNote:text('admin_note'),
+  createdAt:timestamp('created_at',{withTimezone:true}).defaultNow().notNull(),
+  updatedAt:timestamp('updated_at',{withTimezone:true}).defaultNow().notNull(),
+},table=>({sellerIdx:index('seller_contact_requests_seller_idx').on(table.sellerId,table.createdAt),statusIdx:index('seller_contact_requests_status_idx').on(table.status,table.createdAt)}));

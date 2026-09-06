@@ -7,6 +7,7 @@ export interface AppNotification {
 export class NotificationService {
   static async getNotifications(userId: string): Promise<AppNotification[]> {
     const res = await fetch(`/api/data/notifications?userId=${userId}`);
+    if(!res.ok)return [];
     return res.json();
   }
 
@@ -16,7 +17,8 @@ export class NotificationService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'unread-count', userId }),
     });
-    const data = await res.json();
+    if(!res.ok)return 0;
+    const data = await res.json().catch(()=>({count:0}));
     return data.count || 0;
   }
 

@@ -11,6 +11,7 @@ export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
+  const [isIOS,setIsIOS]=useState(false);
 
   useEffect(() => {
     // Check if already installed
@@ -20,9 +21,10 @@ export function usePWAInstall() {
     }
 
     // iOS check
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+    setIsIOS(ios);
     const isStandalone = (navigator as any).standalone === true;
-    if (isIOS && isStandalone) {
+    if (ios && isStandalone) {
       setIsInstalled(true);
       return;
     }
@@ -35,13 +37,14 @@ export function usePWAInstall() {
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    window.addEventListener('appinstalled', () => {
+    const installed=() => {
       setIsInstalled(true);
       setCanInstall(false);
       setDeferredPrompt(null);
-    });
+    };
+    window.addEventListener('appinstalled', installed);
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => {window.removeEventListener('beforeinstallprompt', handler);window.removeEventListener('appinstalled',installed)};
   }, []);
 
   const install = async () => {
@@ -56,5 +59,5 @@ export function usePWAInstall() {
     return outcome === 'accepted';
   };
 
-  return { canInstall, isInstalled, install };
+  return { canInstall, isInstalled, isIOS, requiresManualInstall:isIOS&&!isInstalled&&!canInstall, install };
 }

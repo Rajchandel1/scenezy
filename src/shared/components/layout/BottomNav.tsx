@@ -33,7 +33,7 @@ export function BottomNav() {
     <nav className="app-nav fixed bottom-0 left-0 right-0 border-t z-50 safe-area-bottom">
       <div className="max-w-xl mx-auto flex justify-around items-center h-[5rem] px-4">
         {navItems.map(item => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          const isActive = pathname === item.href || (item.href !== '/seller' && pathname.startsWith(item.href + '/'));
           return (
             <Link key={item.href} href={item.href}
               className={`relative flex flex-col items-center justify-center flex-1 h-16 transition-all ${isActive ? 'text-[var(--forest)]' : 'text-[var(--muted)]'}`}>

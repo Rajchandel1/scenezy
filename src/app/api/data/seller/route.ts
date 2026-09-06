@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/db';
-import { events, passes, orders, entries, transfers, users, passTypes } from '@/shared/db/schema';
-import { eq, and, desc, sql, inArray } from 'drizzle-orm';
+import { events, passes, orders, entries, users, passTypes } from '@/shared/db/schema';
+import { eq, inArray } from 'drizzle-orm';
 import { requireApiUser } from '@/shared/lib/api-auth';
 
 export async function GET(req: NextRequest) {
@@ -38,10 +38,11 @@ export async function GET(req: NextRequest) {
     const pastEvents = sellerEvents.filter(e => new Date(e.date) < now || e.status === 'CANCELLED');
     const pendingEvents = sellerEvents.filter(e => e.status === 'PENDING_APPROVAL');
 
-    const totalRevenue = sellerOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const paidOrders=sellerOrders.filter(order=>order.orderStatus==='PAID');
+    const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.total || 0), 0);
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
-    const monthRevenue = sellerOrders.filter(o => { const d = new Date(o.createdAt); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; }).reduce((sum, o) => sum + (o.total || 0), 0);
+    const monthRevenue = paidOrders.filter(o => { const d = new Date(o.createdAt); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; }).reduce((sum, o) => sum + (o.total || 0), 0);
 
     const eventSales: Record<string, number> = {};
     sellerPasses.forEach(p => { eventSales[p.eventId] = (eventSales[p.eventId] || 0) + 1; });
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
       const pts=sellerPassTypes.filter(type=>type.eventId===event.id);
       const totalCapacity=pts.reduce((sum,type)=>sum+type.available+type.sold,0);
       const totalSold=pts.reduce((sum,type)=>sum+type.sold,0);
-      return {...event,passes:pts,totalSold,totalCapacity,revenue:sellerOrders.filter(order=>order.eventId===event.id).reduce((sum,order)=>sum+(order.total||0),0),checkedIn:sellerEntries.filter(entry=>entry.eventId===event.id&&entry.result==='VALID').length,sellPercentage:totalCapacity?Math.round(totalSold/totalCapacity*100):0};
+      return {...event,passes:pts,totalSold,totalCapacity,revenue:paidOrders.filter(order=>order.eventId===event.id).reduce((sum,order)=>sum+(order.total||0),0),checkedIn:sellerEntries.filter(entry=>entry.eventId===event.id&&entry.result==='VALID').length,sellPercentage:totalCapacity?Math.round(totalSold/totalCapacity*100):0};
     }).sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime());
     return Response.json({
       overview: {
@@ -83,7 +84,6 @@ export async function GET(req: NextRequest) {
     else if (tab === 'pending') filtered = sellerEvents.filter(e => e.status === 'PENDING_APPROVAL');
 
     const enriched = filtered.map((event) => {
-      const evtPasses = sellerPasses.filter(p => p.eventId === event.id);
       const evtOrders = sellerOrders.filter(o => o.eventId === event.id);
       const evtEntries = sellerEntries.filter(e => e.eventId === event.id && e.result === 'VALID');
       const pts=sellerPassTypes.filter(type=>type.eventId===event.id);
@@ -118,7 +118,8 @@ export async function GET(req: NextRequest) {
       return { ...pt, revenue: typePasses.reduce((s, p) => s + p.price, 0), sellPercentage: (pt.available + pt.sold) > 0 ? Math.round((pt.sold / (pt.available + pt.sold)) * 100) : 0 };
     });
 
-    const allUsers = await db.select().from(users);
+    const buyerIds=[...new Set(evtOrders.map(order=>order.userId))];
+    const allUsers=buyerIds.length?await db.select().from(users).where(inArray(users.id,buyerIds)):[];
     const buyers = evtOrders.map(order => {
       const user = allUsers.find(u => u.id === order.userId);
       return { orderId: order.id, userName: user?.name || 'Unknown', userEmail: user?.email || '', items: order.items, total: order.total, createdAt: order.createdAt, paymentStatus: order.paymentStatus };
@@ -129,7 +130,7 @@ export async function GET(req: NextRequest) {
     evtEntries.filter(e => e.result === 'VALID').forEach(e => { activity.push({ type: 'entry', userName: '', details: `${e.passTypeName} checked in at ${e.gate}`, amount: 0, time: e.scannedAt }); });
     activity.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
-    const totalRevenue = evtOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalRevenue = evtOrders.filter(order=>order.orderStatus==='PAID').reduce((sum, o) => sum + (o.total || 0), 0);
     const totalSold = pts.reduce((s, p) => s + p.sold, 0);
     const totalCap = pts.reduce((s, p) => s + p.available + p.sold, 0);
 
@@ -140,7 +141,8 @@ export async function GET(req: NextRequest) {
   }
 
   if (action === 'activity') {
-    const allUsersList = await db.select().from(users);
+    const buyerIds=[...new Set(sellerOrders.map(order=>order.userId))];
+    const allUsersList=buyerIds.length?await db.select().from(users).where(inArray(users.id,buyerIds)):[];
     const activity: any[] = [];
     sellerOrders.forEach(o => { const u = allUsersList.find(u => u.id === o.userId); const ev = sellerEvents.find(e => e.id === o.eventId); activity.push({ type: 'purchase', userName: u?.name || 'Someone', eventTitle: ev?.title, details: Array.isArray(o.items) ? o.items.map((i: any) => i.passTypeName).join(', ') : '', amount: o.total, time: o.createdAt }); });
     activity.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());

@@ -1,9 +1,7 @@
 import { BottomNav } from '@/shared/components/layout/BottomNav';
 import { ToastProvider } from '@/shared/components/ui/Toast';
-import { requirePageRole } from '@/shared/lib/page-auth';
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  await requirePageRole(['USER','SELLER','ADMIN']);
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
       <div className="app-shell">

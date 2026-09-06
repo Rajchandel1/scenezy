@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/db';
-import { notifications, passes, transfers } from '@/shared/db/schema';
+import { notifications, passes, passTypes, transfers, users } from '@/shared/db/schema';
 import { and, eq, sql } from 'drizzle-orm';
 import { requireApiUser } from '@/shared/lib/api-auth';
 
@@ -38,9 +38,13 @@ export async function POST(req:NextRequest) {
     const [pass]=await db.select().from(passes).where(eq(passes.id,body.passId)).limit(1);
     if(!pass || pass.ownerUserId!==auth.profile.id) return Response.json({error:'Pass not found'},{status:404});
     if(pass.status!=='ACTIVE') return Response.json({error:'Only active passes can be transferred'},{status:400});
+    const [type]=await db.select({transferAllowed:passTypes.transferAllowed}).from(passTypes).where(eq(passTypes.id,pass.passTypeId)).limit(1);
+    if(!type?.transferAllowed)return Response.json({error:'This pass type cannot be transferred'},{status:409});
     try {
       const [transfer]=await db.insert(transfers).values({ passId:pass.id,senderUserId:auth.profile.id,senderName:auth.profile.name,recipientIdentifier:recipient,status:'PENDING',eventTitle:pass.eventTitle,passTypeName:pass.passTypeName,eventDate:pass.eventDate,eventTime:pass.eventTime,eventLocation:pass.eventLocation,eventVenue:pass.eventVenue,expiresAt:new Date(Date.now()+48*60*60*1000) }).returning();
       await db.insert(notifications).values({userId:auth.profile.id,type:'transfer',title:'Transfer started',body:`Your ${pass.passTypeName} pass is waiting to be claimed.`,icon:'send',link:`/passes/${pass.id}`});
+      const [recipientUser]=await db.select({id:users.id}).from(users).where(eq(users.email,recipient)).limit(1);
+      if(recipientUser)await db.insert(notifications).values({userId:recipientUser.id,type:'claim',title:'A pass is waiting for you',body:`${auth.profile.name} sent you a ${pass.passTypeName} pass for ${pass.eventTitle}.`,icon:'ticket',link:`/claim/${transfer.id}`});
       return Response.json(transfer,{status:201});
     } catch { return Response.json({error:'This pass already has a pending transfer'},{status:409}); }
   }

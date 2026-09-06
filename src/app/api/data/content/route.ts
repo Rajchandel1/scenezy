@@ -22,6 +22,9 @@ export async function GET(req:NextRequest){
     return Response.json({categories:categoryRows,sections:sectionRows,events:eventRows.map(event=>({...event,posterUrl:eventPosterUrl(event.posterUrl)}))});
   }
   const visibleSections=sectionRows.filter(section=>section.active);
+  // Admin controls storefront visibility through ACTIVE/CANCELLED. Do not
+  // silently remove events based on the server date; doing so empties curated
+  // sections and makes the entire home dashboard look broken.
   const activeEvents=await db.select().from(events).where(eq(events.status,'ACTIVE')).orderBy(asc(events.date));
   const types=activeEvents.length?await db.select().from(passTypes).where(inArray(passTypes.eventId,activeEvents.map(event=>event.id))):[];
   const enrichedEvents=activeEvents.map(event=>({...event,posterUrl:eventPosterUrl(event.posterUrl),passes:types.filter(type=>type.eventId===event.id)}));

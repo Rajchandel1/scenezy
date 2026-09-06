@@ -53,7 +53,7 @@ export default function ScannerPage() {
         },
         () => {}
       );
-    } catch (err) {
+    } catch {
       setScanning(false);
       setError('Camera not available. Use manual entry below.');
     }

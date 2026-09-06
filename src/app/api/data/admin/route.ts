@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       }).from(users),
       db.select().from(events),
       db.select({totalPasses:sql<number>`count(*)::int`,activePasses:sql<number>`count(*) filter (where ${passes.status} = 'ACTIVE')::int`,usedPasses:sql<number>`count(*) filter (where ${passes.status} = 'USED')::int`}).from(passes),
-      db.select({totalOrders:sql<number>`count(*)::int`,totalRevenue:sql<number>`coalesce(sum(${orders.total}),0)::int`}).from(orders),
+      db.select({totalOrders:sql<number>`count(*) filter (where ${orders.orderStatus} = 'PAID')::int`,totalRevenue:sql<number>`coalesce(sum(${orders.total}) filter (where ${orders.orderStatus} = 'PAID'),0)::int`}).from(orders),
       db.select({totalEntries:sql<number>`count(*)::int`,entriesToday:sql<number>`count(*) filter (where ${entries.scannedAt} >= current_date)::int`,validEntriesToday:sql<number>`count(*) filter (where ${entries.scannedAt} >= current_date and ${entries.result} = 'VALID')::int`}).from(entries),
     ]);
     const user=userStats[0],pass=passStats[0],order=orderStats[0],entry=entryStats[0];
@@ -66,22 +66,22 @@ export async function GET(req: NextRequest) {
   }
 
   if (action === 'passes') {
-    const result = await db.select().from(passes).orderBy(desc(passes.createdAt));
+    const result = await db.select().from(passes).orderBy(desc(passes.createdAt)).limit(200);
     return Response.json(result);
   }
 
   if (action === 'orders') {
-    const result = await db.select().from(orders).orderBy(desc(orders.createdAt));
+    const result = await db.select().from(orders).orderBy(desc(orders.createdAt)).limit(200);
     return Response.json(result);
   }
 
   if (action === 'entries') {
-    const result = await db.select().from(entries).orderBy(desc(entries.scannedAt));
+    const result = await db.select().from(entries).orderBy(desc(entries.scannedAt)).limit(200);
     return Response.json(result);
   }
 
   if (action === 'audit') {
-    const result = await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
+    const result = await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(200);
     return Response.json(result);
   }
 

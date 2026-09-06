@@ -5,11 +5,11 @@ import Link from 'next/link';
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
+  
 
   useEffect(() => {
     fetch('/api/data/admin?action=orders').then(r => r.json()).then(setOrders);
   }, []);
-
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">

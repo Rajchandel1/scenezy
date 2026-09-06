@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowRight, CalendarPlus } from 'lucide-react';
 import { authService } from '@/features/auth';
 import { EventCardSkeleton, PageLoading } from '@/shared/components/ui/States';
 
@@ -73,10 +74,23 @@ function EventsContent() {
       {!loaded ? (
         <div className="space-y-3"><EventCardSkeleton/><EventCardSkeleton/></div>
       ) : events.length === 0 ? (
-        <div className="text-center py-12 space-y-2">
-          <p className="text-neutral-500 text-sm">No events here</p>
-          <Link href="/seller/create" className="text-[#2563eb] text-sm">Create one →</Link>
-        </div>
+        <section className="relative overflow-hidden rounded-[1.75rem] border border-[var(--line)] bg-[var(--surface)] px-6 py-9 text-center">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full border-[28px] border-blue-500/10" />
+          <div className="pointer-events-none absolute -bottom-16 -left-14 h-36 w-36 rounded-full bg-blue-600/10 blur-2xl" />
+          <div className="relative mx-auto mb-6 w-32 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3 shadow-[0_18px_50px_rgba(37,99,235,0.12)]">
+            <div className="rounded-xl border border-dashed border-blue-400/35 bg-[var(--canvas)] px-4 py-5">
+              <CalendarPlus className="mx-auto text-blue-500" size={27} strokeWidth={1.6}/>
+              <div className="mx-auto mt-4 h-px w-12 bg-blue-500/30" />
+              <p className="mt-3 text-[8px] font-bold uppercase tracking-[.22em] text-blue-500">New scene</p>
+            </div>
+          </div>
+          <div className="relative">
+            <p className="eyebrow text-blue-500">{tab === 'all' ? 'Your event studio' : `${tab} events`}</p>
+            <h2 className="display-serif mt-2 text-3xl text-[var(--ink)]">{tab === 'active' ? 'Your stage is ready' : 'Nothing here yet'}</h2>
+            <p className="muted mx-auto mt-3 max-w-xs text-sm leading-6">{tab === 'active' ? 'Create your next event, submit it for review, and manage every booking from here.' : `You don’t have any ${tab} events right now. Start a new event whenever you’re ready.`}</p>
+            <Link href="/seller/create" className="brand-button mx-auto mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-lg shadow-blue-600/15">Create an event <ArrowRight size={16}/></Link>
+          </div>
+        </section>
       ) : (
         <div className="space-y-3">
           {events.map(event => (

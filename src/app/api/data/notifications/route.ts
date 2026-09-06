@@ -1,18 +1,24 @@
 import { NextRequest } from 'next/server';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/shared/db';
 import { notifications } from '@/shared/db/schema';
 import { requireApiUser } from '@/shared/lib/api-auth';
 
 export async function GET(req:NextRequest) {
+  try {
   const auth=await requireApiUser(); if(auth.error)return auth.error;
   const requested=new URL(req.url).searchParams.get('userId');
   if(requested && auth.profile.role!=='ADMIN' && requested!==auth.profile.id) return Response.json({error:'Forbidden'},{status:403});
   const userId=auth.profile.role==='ADMIN'&&requested?requested:auth.profile.id;
-  return Response.json(await db.select().from(notifications).where(eq(notifications.userId,userId)).orderBy(desc(notifications.createdAt)));
+  return Response.json(await db.select().from(notifications).where(eq(notifications.userId,userId)).orderBy(desc(notifications.createdAt)).limit(50));
+  } catch (error) {
+    console.error('[Notifications GET]', error);
+    return Response.json([], { headers: { 'x-scenezy-degraded': 'notifications' } });
+  }
 }
 
 export async function POST(req:NextRequest) {
+  try {
   const auth=await requireApiUser(); if(auth.error)return auth.error;
   const body=await req.json();
   if(body.action==='mark-read') {
@@ -24,8 +30,8 @@ export async function POST(req:NextRequest) {
     return Response.json({success:true});
   }
   if(body.action==='unread-count') {
-    const rows=await db.select({id:notifications.id}).from(notifications).where(and(eq(notifications.userId,auth.profile.id),eq(notifications.read,false)));
-    return Response.json({count:rows.length});
+    const [result]=await db.select({count:sql<number>`count(*)::int`}).from(notifications).where(and(eq(notifications.userId,auth.profile.id),eq(notifications.read,false)));
+    return Response.json({count:result?.count||0});
   }
   // Self-notifications remain available for non-sensitive client UX; the
   // authenticated identity always overrides a browser-provided userId.
@@ -34,4 +40,8 @@ export async function POST(req:NextRequest) {
     return Response.json(created,{status:201});
   }
   return Response.json({error:'Unknown action'},{status:400});
+  } catch (error) {
+    console.error('[Notifications POST]', error);
+    return Response.json({count:0,degraded:true}, { headers: { 'x-scenezy-degraded': 'notifications' } });
+  }
 }

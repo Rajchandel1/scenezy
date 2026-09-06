@@ -79,6 +79,8 @@ export default function TransferPage() {
     setCancelling(false);
   };
 
+  const shareClaim=async()=>{if(!transfer)return;const url=`${location.origin}/claim/${transfer.id}`;if(navigator.share)await navigator.share({title:`${pass?.eventTitle} pass`,text:'Claim your Scenezy pass',url});else{await navigator.clipboard.writeText(url);setError('Claim link copied. Share it with the recipient.')}};
+
   if (loading) {
     return <PageLoading message="Opening transfer…" />;
   }
@@ -178,6 +180,11 @@ export default function TransferPage() {
             {error && (
               <div className="bg-red-950/30 border border-red-900/50 text-red-400 text-sm rounded-xl px-4 py-3">{error}</div>
             )}
+
+            <button
+              onClick={shareClaim}
+              className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl"
+            >Share secure claim link</button>
 
             <button
               onClick={handleCancel}

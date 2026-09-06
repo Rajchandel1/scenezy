@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS=['/','/sign-in','/sign-up','/forgot-password','/reset-password','/verify-email','/auth/callback','/claim','/api/data/auth','/api/data/profile','/api/data/forgot-password'];
+const PUBLIC_PATHS=['/','/sign-in','/sign-up','/forgot-password','/reset-password','/verify-email','/auth/callback','/claim','/terms','/privacy','/api/health','/api/data/auth','/api/data/profile','/api/data/forgot-password'];
 const isPublic=(pathname:string)=>PUBLIC_PATHS.some(path=>pathname===path||(path!=='/'&&pathname.startsWith(`${path}/`)));
 const homeForRole=(role?:string)=>role==='ADMIN'?'/admin':role==='SELLER'?'/seller':'/home';
 type AuthProfile={id:string;email:string;name:string;role:string;approved:boolean|null;suspended:boolean|null};
@@ -22,6 +22,7 @@ function getProfile(userId:string){
 
 export async function proxy(request:NextRequest){
   const {pathname}=request.nextUrl;
+  const requestId=request.headers.get('x-request-id')||crypto.randomUUID();
   const profileBootstrap=pathname==='/api/data/profile';
   let response=NextResponse.next({request});
   const supabase=createServerClient(process.env.SUPABASE_URL!,process.env.SUPABASE_ANON_KEY!,{cookies:{getAll:()=>request.cookies.getAll(),setAll(cookies){cookies.forEach(({name,value})=>request.cookies.set(name,value));response=NextResponse.next({request});cookies.forEach(({name,value,options})=>response.cookies.set(name,value,options));}}});
@@ -35,6 +36,7 @@ export async function proxy(request:NextRequest){
   const authenticatedResponse=()=>{
     const requestHeaders=new Headers(request.headers);
     ['x-scenezy-auth','x-scenezy-user-id','x-scenezy-user-email','x-scenezy-user-name','x-scenezy-user-role','x-scenezy-user-approved'].forEach(header=>requestHeaders.delete(header));
+    requestHeaders.set('x-request-id',requestId);
     if(user&&profile&&accountAvailable){
       requestHeaders.set('x-scenezy-auth','1');
       requestHeaders.set('x-scenezy-user-id',profile.id);
@@ -47,6 +49,7 @@ export async function proxy(request:NextRequest){
     response.cookies.getAll().forEach(cookie=>next.cookies.set(cookie));
     next.headers.set('Cache-Control','private, no-store, no-cache, max-age=0, must-revalidate');
     next.headers.set('Vary','Cookie');
+    next.headers.set('x-request-id',requestId);
     return next;
   };
   if(isPublic(pathname)){

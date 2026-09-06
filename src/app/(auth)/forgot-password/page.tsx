@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { LoadingButton } from '@/shared/components/ui/LoadingButton';
+import { createSupabaseBrowserClient } from '@/shared/lib/supabase-client';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -16,18 +17,10 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/data/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'request', email }),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        setSent(true);
-      } else {
-        setError(data.error || 'Something went wrong');
-      }
+      const supabase=createSupabaseBrowserClient();
+      const {error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo:`${window.location.origin}/reset-password`});
+      if(error)throw error;
+      setSent(true);
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -45,14 +38,10 @@ export default function ForgotPasswordPage() {
         </div>
         <div className="space-y-2">
           <h2 className="text-white text-xl font-bold">Check your email</h2>
-          <p className="text-neutral-400 text-sm">We sent a 6-digit OTP to</p>
+          <p className="text-neutral-400 text-sm">If an account exists, a secure reset link was sent to</p>
           <p className="text-[#2563eb] font-medium text-sm">{email}</p>
-          <p className="text-neutral-500 text-xs mt-2">Enter the OTP on the next screen to reset your password.</p>
+          <p className="text-neutral-500 text-xs mt-2">Open the link to choose a new password. The link expires automatically.</p>
         </div>
-        <Link href="/reset-password"
-          className="block w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98]">
-          Enter OTP
-        </Link>
         <button onClick={() => setSent(false)}
           className="text-neutral-500 text-sm hover:text-[#2563eb] transition-colors">
           ← Use different email
@@ -65,7 +54,7 @@ export default function ForgotPasswordPage() {
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="text-center space-y-2 mb-2">
         <h1 className="text-white text-xl font-bold">Forgot Password?</h1>
-        <p className="text-neutral-500 text-sm">Enter your email to receive a reset OTP</p>
+        <p className="text-neutral-500 text-sm">Enter your email to receive a secure reset link</p>
       </div>
 
       <div className="space-y-1.5">
@@ -77,9 +66,9 @@ export default function ForgotPasswordPage() {
 
       {error && <div className="bg-red-950/30 border border-red-900/50 text-red-400 text-sm rounded-xl px-4 py-3">{error}</div>}
 
-      <LoadingButton type="submit" loading={loading} loadingLabel="Sending OTP…"
+      <LoadingButton type="submit" loading={loading} loadingLabel="Sending reset link..."
         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98]">
-        Send Reset OTP
+        Send reset link
       </LoadingButton>
 
       <p className="text-center text-neutral-500 text-sm">

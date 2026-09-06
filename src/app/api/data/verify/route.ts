@@ -1,7 +1,10 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/db';
-import { passes, entries, events, transfers } from '@/shared/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { passes, entries, events } from '@/shared/db/schema';
+import { eq, and, inArray, sql } from 'drizzle-orm';
+import { requireApiUser } from '@/shared/lib/api-auth';
+import { scannerSchema, validationError } from '@/shared/lib/validation';
+import { checkRateLimit, rateLimitResponse } from '@/shared/lib/rate-limiter';
 
 function extractCredential(input: string): string {
   let cred = input.trim();
@@ -28,28 +31,32 @@ async function recordEntry(passId: string | null, eventId: string | null, eventT
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const rawInput = body.credential || '';
-  const gate = body.gate || 'Main Gate';
-
-  if (!rawInput) return Response.json({ valid: false, reason: 'No credential provided' });
+  const auth=await requireApiUser(['SELLER','ADMIN']);
+  if(auth.error)return auth.error;
+  const parsed=scannerSchema.safeParse(await req.json());
+  if(!parsed.success)return validationError(parsed.error);
+  const limit=await checkRateLimit(`scan:${auth.profile.id}`,120,60);
+  if(!limit.allowed)return rateLimitResponse(limit.resetAt);
+  const rawInput=parsed.data.credential,gate=parsed.data.gate;
 
   const credential = extractCredential(rawInput);
 
   // Find pass by credential
   const [pass] = await db.select().from(passes).where(eq(passes.credential, credential)).limit(1);
 
-  // Fallback: fuzzy match
-  let foundPass: typeof pass | null = pass ?? null;
-  if (!foundPass) {
-    const allPasses = await db.select().from(passes);
-    foundPass = allPasses.find(p => credential.includes(p.credential) || p.credential.includes(credential)) || null;
-  }
+  const foundPass:typeof pass|null=pass??null;
 
   if (!foundPass) {
     await recordEntry(null, null, 'Unknown', 'Unknown', credential, 'INVALID', 'Credential not recognized', gate);
-    return Response.json({ valid: false, reason: 'Invalid QR code. Not recognized.', debug: { searched: credential } });
+    return Response.json({ valid: false, reason: 'Invalid QR code. Not recognized.' });
   }
+
+  const [event] = await db.select().from(events).where(eq(events.id, foundPass.eventId)).limit(1);
+  if (!event) {
+    await recordEntry(foundPass.id, foundPass.eventId, foundPass.eventTitle, foundPass.passTypeName, credential, 'INVALID', 'Event not found', gate);
+    return Response.json({ valid: false, reason: 'Event not found' });
+  }
+  if(auth.profile.role==='SELLER'&&event.sellerId!==auth.profile.id)return Response.json({valid:false,reason:'This scanner is not assigned to that event'},{status:403});
 
   if (foundPass.status === 'REVOKED') {
     await recordEntry(foundPass.id, foundPass.eventId, foundPass.eventTitle, foundPass.passTypeName, credential, 'INVALID', 'Pass has been revoked', gate);
@@ -67,18 +74,17 @@ export async function POST(req: NextRequest) {
   }
 
   // Check event is active
-  const [event] = await db.select().from(events).where(eq(events.id, foundPass.eventId)).limit(1);
-  if (!event) {
-    await recordEntry(foundPass.id, foundPass.eventId, foundPass.eventTitle, foundPass.passTypeName, credential, 'INVALID', 'Event not found', gate);
-    return Response.json({ valid: false, reason: 'Event not found' });
-  }
   if (event.status !== 'ACTIVE') {
     await recordEntry(foundPass.id, foundPass.eventId, foundPass.eventTitle, foundPass.passTypeName, credential, 'INVALID', 'Event is no longer active', gate);
     return Response.json({ valid: false, reason: 'Event is no longer active', passName: foundPass.passTypeName, eventTitle: foundPass.eventTitle });
   }
 
   // All checks passed - mark as USED
-  await db.update(passes).set({ status: 'USED' }).where(eq(passes.id, foundPass.id));
+  const [consumed]=await db.update(passes).set({status:'USED'}).where(and(eq(passes.id,foundPass.id),eq(passes.status,'ACTIVE'))).returning();
+  if(!consumed){
+    await recordEntry(foundPass.id,foundPass.eventId,foundPass.eventTitle,foundPass.passTypeName,credential,'INVALID','Pass already used',gate);
+    return Response.json({valid:false,reason:'PASS ALREADY USED',passName:foundPass.passTypeName,eventTitle:foundPass.eventTitle},{status:409});
+  }
   await recordEntry(foundPass.id, foundPass.eventId, foundPass.eventTitle, foundPass.passTypeName, credential, 'VALID', 'Entry approved', gate);
 
   return Response.json({
@@ -93,6 +99,14 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  const result = await db.select().from(entries).orderBy(sql`${entries.scannedAt} DESC`);
+  const auth=await requireApiUser(['SELLER','ADMIN']);
+  if(auth.error)return auth.error;
+  if(auth.profile.role==='SELLER'){
+    const owned=await db.select({id:events.id}).from(events).where(eq(events.sellerId,auth.profile.id));
+    if(!owned.length)return Response.json([]);
+    const result=await db.select().from(entries).where(inArray(entries.eventId,owned.map(event=>event.id))).orderBy(sql`${entries.scannedAt} DESC`).limit(200);
+    return Response.json(result);
+  }
+  const result = await db.select().from(entries).orderBy(sql`${entries.scannedAt} DESC`).limit(200);
   return Response.json(result);
 }

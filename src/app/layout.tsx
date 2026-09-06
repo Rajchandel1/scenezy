@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/shared/components/theme/ThemeProvider';
 import { PWARegister } from '@/shared/components/layout/PWARegister';
+import { NavigationFeedback } from '@/shared/components/layout/NavigationFeedback';
 
 export const metadata: Metadata = {
   title: 'Scenezy — Discover Events & Manage Passes',
@@ -30,12 +31,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('scenezy_theme')||'system';var r=t==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t;document.documentElement.dataset.theme=r;document.documentElement.style.colorScheme=r}catch(e){}})()` }} />
         <script dangerouslySetInnerHTML={{__html:`window.__SCENEZY_CONFIG__=${runtimeConfig};`}}/>
-        <link rel="apple-touch-icon" href="/scenezy-logo.png?v=2" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png?v=3" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className="text-white antialiased min-h-screen">
-        <ThemeProvider><PWARegister/>{children}</ThemeProvider>
+        <ThemeProvider><PWARegister/><NavigationFeedback/>{children}</ThemeProvider>
       </body>
     </html>
   );

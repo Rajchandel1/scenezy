@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export default function NotFound(){return <main className="min-h-screen grid place-items-center px-6"><div className="text-center"><p className="eyebrow">404 · Off the guest list</p><h1 className="display-serif text-4xl mt-3">This scene does not exist.</h1><Link href="/" className="brand-button inline-block rounded-full px-6 py-3 mt-6 text-sm font-semibold">Return to Scenezy</Link></div></main>}

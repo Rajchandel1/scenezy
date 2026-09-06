@@ -5,20 +5,22 @@ import { events, orders, passTypes } from '@/shared/db/schema';
 import { requireApiUser } from '@/shared/lib/api-auth';
 import { createRazorpayOrder, fetchRazorpayPayment, verifyPaymentSignature } from '@/shared/lib/razorpay';
 import { fulfillPaidOrder } from '@/shared/lib/fulfill-order';
-
-type PurchaseItem={passTypeId:string;quantity:number};
+import { orderCreateSchema, validationError } from '@/shared/lib/validation';
+import { checkRateLimit, rateLimitResponse } from '@/shared/lib/rate-limiter';
 
 export async function GET(req:NextRequest){
   const auth=await requireApiUser();
   if(auth.error)return auth.error;
   const requestedUser=new URL(req.url).searchParams.get('userId');
   const userId=auth.profile.role==='ADMIN'&&requestedUser?requestedUser:auth.profile.id;
-  return Response.json(await db.select().from(orders).where(eq(orders.userId,userId)).orderBy(desc(orders.createdAt)));
+  return Response.json(await db.select().from(orders).where(eq(orders.userId,userId)).orderBy(desc(orders.createdAt)).limit(100));
 }
 
 export async function POST(req:NextRequest){
   const auth=await requireApiUser(['USER']);
   if(auth.error)return auth.error;
+  const limit=await checkRateLimit(`checkout:${auth.profile.id}`,20,60);
+  if(!limit.allowed)return rateLimitResponse(limit.resetAt);
   try{
     const body=await req.json();
     if(body.action==='verify'){
@@ -30,20 +32,19 @@ export async function POST(req:NextRequest){
       if(payment.order_id!==providerOrderId||payment.amount!==localOrder.total*100||payment.currency!=='INR'||payment.status!=='captured')return Response.json({error:'Payment is not captured yet'},{status:409});
       return Response.json({order:await fulfillPaidOrder(providerOrderId,paymentId),success:true});
     }
-
-    const idempotencyKey=String(body.idempotencyKey||'');
-    const requestedItems=Array.isArray(body.items)?body.items as PurchaseItem[]:[];
-    if(!idempotencyKey||idempotencyKey.length>100)return Response.json({error:'A valid checkout key is required'},{status:400});
-    if(!body.eventId||!requestedItems.length||requestedItems.length>10)return Response.json({error:'Invalid order'},{status:400});
-    if(requestedItems.some(item=>!item.passTypeId||!Number.isInteger(item.quantity)||item.quantity<1||item.quantity>10))return Response.json({error:'Invalid quantity'},{status:400});
+    const parsed=orderCreateSchema.safeParse(body);
+    if(!parsed.success)return validationError(parsed.error);
+    const {idempotencyKey,items:requestedItems,eventId}=parsed.data;
+    if(new Set(requestedItems.map(item=>item.passTypeId)).size!==requestedItems.length)return Response.json({error:'Each pass type can appear only once'},{status:400});
     const [existing]=await db.select().from(orders).where(eq(orders.idempotencyKey,idempotencyKey)).limit(1);
     if(existing){
       if(existing.userId!==auth.profile.id)return Response.json({error:'Checkout key conflict'},{status:409});
       return Response.json({order:existing,providerOrderId:existing.providerOrderId,keyId:process.env.RAZORPAY_KEY_ID});
     }
-
-    const [event]=await db.select().from(events).where(and(eq(events.id,body.eventId),eq(events.status,'ACTIVE'))).limit(1);
+    const [event]=await db.select().from(events).where(and(eq(events.id,eventId),eq(events.status,'ACTIVE'))).limit(1);
     if(!event)return Response.json({error:'This event is unavailable'},{status:400});
+    const eventStartsAt=new Date(`${event.date}T${event.time}:00+05:30`).getTime();
+    if(!Number.isFinite(eventStartsAt)||eventStartsAt<=Date.now())return Response.json({error:'Booking for this event has closed'},{status:409});
     const normalized=[] as Array<{passTypeId:string;passTypeName:string;quantity:number;unitPrice:number;total:number}>;
     for(const requestItem of requestedItems){
       const [type]=await db.select().from(passTypes).where(and(eq(passTypes.id,requestItem.passTypeId),eq(passTypes.eventId,event.id))).limit(1);

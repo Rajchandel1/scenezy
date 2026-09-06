@@ -11,7 +11,7 @@ export class ApiOrderService {
     if(!idempotencyKey){idempotencyKey=crypto.randomUUID();sessionStorage.setItem(storageKey,idempotencyKey);}
     const response=await fetch('/api/data/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...input,idempotencyKey})});
     const data=await response.json();
-    if(!response.ok)throw new Error(data.error||'Checkout failed');
+    if(!response.ok){if(data.retryable)sessionStorage.removeItem(storageKey);throw new Error(data.error||'Checkout failed');}
     if(!data.providerOrderId||!data.keyId)throw new Error('Payment gateway is not configured');
     return data;
   }

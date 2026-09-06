@@ -17,7 +17,6 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get('userId');
   const passId = searchParams.get('passId');
-
   if (passId) {
     const result = await db.select().from(passes).where(eq(passes.id, passId)).limit(1);
     const pass = result[0];
@@ -25,9 +24,10 @@ export async function GET(req: NextRequest) {
     return Response.json(pass || null);
   }
 
-  if (userId) {
-    if (auth.profile.role !== 'ADMIN' && userId !== auth.profile.id) return Response.json({ error:'Forbidden' }, { status:403 });
-    const result = await db.select().from(passes).where(eq(passes.ownerUserId, userId));
+  if (userId || auth.profile.role !== 'ADMIN') {
+    const ownerUserId = userId || auth.profile.id;
+    if (auth.profile.role !== 'ADMIN' && ownerUserId !== auth.profile.id) return Response.json({ error:'Forbidden' }, { status:403 });
+    const result = await db.select().from(passes).where(eq(passes.ownerUserId, ownerUserId));
     return Response.json(result);
   }
 
