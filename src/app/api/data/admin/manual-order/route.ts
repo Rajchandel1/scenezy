@@ -1,14 +1,17 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/db';
-import { users, events, passes, orders } from '@/shared/db/schema';
+// ✅ Add 'orders' to this import line
+import { users, events, passes, passTypes, orders } from '@/shared/db/schema'; 
 import { eq, and } from 'drizzle-orm';
-import { requireApiUser } from '@/shared/lib/auth-helpers';
-import { checkRateLimit, getClientIP, rateLimitResponse } from '@/shared/lib/rate-limiter';
+import { requireApiUser } from '@/shared/lib/api-auth';
 import { randomUUID } from 'crypto';
+import { checkRateLimit, getClientIP, rateLimitResponse } from '@/shared/lib/rate-limiter';
 
-// Generate secure credential for pass
-function generateCredential() {
-  return randomUUID().replace(/-/g, '').toUpperCase().slice(0, 16);
+function generateCredential(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = 'PASS_';
+  for (let i = 0; i < 24; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+  return result;
 }
 
 export async function POST(req: NextRequest) {
@@ -38,7 +41,7 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'User not found with this email' }, { status: 404 });
     }
 
-    // Verify event and pass type exist
+    // Verify event exists and is active
     const [event] = await db.select().from(events)
       .where(and(eq(events.id, eventId), eq(events.status, 'ACTIVE')))
       .limit(1);
@@ -47,7 +50,11 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'Event not found or inactive' }, { status: 404 });
     }
 
-    const passType = event.passes?.find((p: any) => p.id === passTypeId);
+    // Verify pass type belongs to this event
+    const [passType] = await db.select().from(passTypes)
+      .where(and(eq(passTypes.id, passTypeId), eq(passTypes.eventId, eventId)))
+      .limit(1);
+
     if (!passType) {
       return Response.json({ error: 'Pass type not found in this event' }, { status: 404 });
     }
@@ -56,37 +63,43 @@ export async function POST(req: NextRequest) {
 
     // Create everything in a transaction
     const result = await db.transaction(async (tx) => {
-      // 1. Create PAID order record (isolated from Razorpay flow)
+      // 1. Create PAID order record (matching your schema exactly)
       const [order] = await tx.insert(orders).values({
         userId: targetUser.id,
         eventId: eventId,
-        providerOrderId: `MANUAL-${Date.now()}`,
-        idempotencyKey: `manual-${randomUUID()}`,
-        orderStatus: 'PAID',
-        paymentStatus: 'CAPTURED',
-        currency: 'INR',
-        subtotal: passType.price * quantity,
+        eventTitle: event.title,
+        items: [{
+          passTypeId: passType.id,
+          passTypeName: passType.name,
+          quantity,
+          unitPrice: passType.price,
+          total: totalAmount
+        }],
+        subtotal: totalAmount,
         fees: Math.round(totalAmount * 0.05),
         total: totalAmount + Math.round(totalAmount * 0.05),
-        metadata: { 
-          source: 'MANUAL_ADMIN', 
-          adminId: auth.profile.id,
-          notes: notes || '',
-          createdAt: new Date().toISOString()
-        },
+        paymentStatus: 'SUCCESS',
+        orderStatus: 'PAID',
+        transactionId: `MANUAL-${Date.now()}`,
+        idempotencyKey: `manual-${crypto.randomUUID()}`
       }).returning();
 
-      // 2. Issue passes directly
+      // 2. Issue passes directly (matching your schema exactly)
       const issuedPasses = [];
       for (let i = 0; i < quantity; i++) {
         const [pass] = await tx.insert(passes).values({
-          orderId: order.id,
-          userId: targetUser.id,
           eventId: eventId,
-          passTypeId: passTypeId,
+          eventTitle: event.title,
+          passTypeId: passType.id,
+          passTypeName: passType.name,
+          price: passType.price,
+          ownerUserId: targetUser.id,
           credential: generateCredential(),
           status: 'ACTIVE',
-          issuedAt: new Date(),
+          eventDate: event.date,
+          eventTime: event.time,
+          eventLocation: event.location,
+          eventVenue: event.venue
         }).returning();
         issuedPasses.push(pass);
       }
