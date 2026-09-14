@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS=['/','/sign-in','/sign-up','/forgot-password','/reset-password','/verify-email','/auth/callback','/claim','/terms','/privacy','/api/health','/api/data/auth','/api/data/profile','/api/data/forgot-password'];
+const PUBLIC_PATHS=['/','/sign-in','/sign-up','/forgot-password','/reset-password','/verify-email','/auth/callback','/auth/confirm','/claim','/terms','/privacy','/cancellation-refund-policy','/contact','/api/health','/api/data/auth','/api/data/profile','/api/data/forgot-password'];
 const isPublic=(pathname:string)=>PUBLIC_PATHS.some(path=>pathname===path||(path!=='/'&&pathname.startsWith(`${path}/`)));
 const homeForRole=(role?:string)=>role==='ADMIN'?'/admin':role==='SELLER'?'/seller':'/home';
 type AuthProfile={id:string;email:string;name:string;role:string;approved:boolean|null;suspended:boolean|null};
@@ -68,4 +68,4 @@ export async function proxy(request:NextRequest){
   return authenticatedResponse();
 }
 
-export const config={matcher:['/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|workbox-|.*\\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico)$).*)']};
+export const config={matcher:['/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|workbox-|.*\\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|mp4|webm)$).*)']};

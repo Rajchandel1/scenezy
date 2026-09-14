@@ -6,10 +6,14 @@ import { useEffect, useState } from 'react';
 import { ArrowUpRight, Download, Share2 } from 'lucide-react';
 import { PassLogo } from '@/shared/components/branding/PassLogo';
 import { usePWAInstall } from '@/shared/lib/use-pwa';
+import { PublicFooter } from '@/shared/components/legal/PublicFooter';
+
+type PublicEvent = { id:string; title:string; date:string; location:string; passes:Array<{price:number;available:number}> };
 
 export default function LandingPage() {
   const { canInstall, isInstalled, install } = usePWAInstall();
   const [showIOSHint, setShowIOSHint] = useState(false);
+  const [liveEvents, setLiveEvents] = useState<PublicEvent[]>([]);
 
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -17,13 +21,20 @@ export default function LandingPage() {
     if (isIOS && isSafari && !isInstalled) setShowIOSHint(true);
   }, [isInstalled]);
 
+  useEffect(() => {
+    fetch('/api/data/content')
+      .then(async response => response.ok ? response.json() : null)
+      .then(data => setLiveEvents((data?.events || []).filter((event:PublicEvent) => event.passes?.some(pass => pass.available > 0)).slice(0, 3)))
+      .catch(() => undefined);
+  }, []);
+
   const handleInstall = async () => {
     if (canInstall) await install();
     else if (!showIOSHint) setShowIOSHint(true);
   };
 
   return (
-    <main className="relative min-h-[100svh] overflow-hidden bg-[#02040a] text-white">
+    <main className="scenezy-dark-landing relative min-h-[100svh] overflow-x-hidden bg-[#02040a] text-white">
       <div className="absolute inset-x-0 top-0 h-[72svh] min-h-[31rem]">
         <Image
           src="/scenezy-welcome-events.png"
@@ -88,6 +99,30 @@ export default function LandingPage() {
 
         <p className="mt-4 text-center text-[10px] uppercase tracking-[.2em] text-white/30">Discover · Book · Enter</p>
       </div>
+
+      <div className="relative z-10 border-t border-white/10 bg-[#05070d] px-5 py-14">
+        <div className="mx-auto max-w-3xl space-y-14">
+          <section aria-labelledby="pricing-heading">
+            <p className="text-[10px] font-bold uppercase tracking-[.22em] text-blue-400">Clear INR pricing</p>
+            <div className="mt-2 flex items-end justify-between gap-4"><div><h2 id="pricing-heading" className="text-3xl font-bold tracking-tight">Tickets available now</h2><p className="mt-2 text-sm leading-6 text-white/50">Each event displays its ticket price before booking. A 5% platform fee and the final payable total are shown before payment.</p></div></div>
+            {liveEvents.length > 0 ? <div className="mt-6 grid gap-3 sm:grid-cols-3">{liveEvents.map(event => {
+              const prices=event.passes.filter(pass=>pass.available>0).map(pass=>pass.price);
+              return <Link key={event.id} href={`/events/${event.id}`} className="rounded-2xl border border-white/10 bg-white/[.04] p-4 transition hover:border-blue-500/50"><p className="truncate font-semibold">{event.title}</p><p className="mt-1 truncate text-xs text-white/40">{event.location} · {new Date(event.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</p><p className="mt-5 text-sm font-bold text-blue-400">From ₹{Math.min(...prices).toLocaleString('en-IN')}</p></Link>;
+            })}</div> : <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.04] p-5"><p className="font-semibold">Live event pricing</p><p className="mt-1 text-sm leading-6 text-white/45">Open any active event to see available pass types and current prices in INR. The complete payable amount is confirmed before checkout.</p></div>}
+          </section>
+
+          <section aria-labelledby="delivery-heading">
+            <p className="text-[10px] font-bold uppercase tracking-[.22em] text-blue-400">Digital delivery</p>
+            <h2 id="delivery-heading" className="mt-2 text-3xl font-bold tracking-tight">Your ticket, delivered in seconds</h2>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {[['01','Choose & pay','Select an available pass. Pricing, quantity, fee and final total remain visible before payment.'],['02','Payment verified','Your booking is confirmed only after the payment gateway reports a successful payment.'],['03','Pass delivered','The digital ticket and entry QR appear in My Passes. Present that QR at the event entrance.']].map(([number,title,copy])=><div key={number} className="rounded-2xl border border-white/10 bg-white/[.04] p-5"><span className="font-mono text-xs text-blue-400">{number}</span><h3 className="mt-5 font-semibold">{title}</h3><p className="mt-2 text-xs leading-5 text-white/45">{copy}</p></div>)}
+            </div>
+            <p className="mt-4 text-xs leading-5 text-white/40">Paid but cannot see your ticket? Check Orders first, then <Link href="/contact" className="text-blue-400 hover:underline">contact Scenezy</Link> with your order ID.</p>
+          </section>
+        </div>
+      </div>
+
+      <div className="relative z-10 bg-[#03050a]"><PublicFooter/></div>
     </main>
   );
 }

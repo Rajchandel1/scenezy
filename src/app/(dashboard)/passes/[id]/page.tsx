@@ -1,17 +1,20 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Copy, MapPin, Send } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { PassService, type Pass } from '@/features/passes';
 import { TransferService } from '@/features/transfers';
 import { Skeleton } from '@/shared/components/ui/States';
+import { useClientQuery } from '@/shared/hooks/useClientQuery';
 
 export default function PassDetailPage(){
   const {id}=useParams<{id:string}>(),router=useRouter();
-  const [pass,setPass]=useState<Pass|null>(null),[loaded,setLoaded]=useState(false),[pending,setPending]=useState(false),[copied,setCopied]=useState(false);
-  useEffect(()=>{PassService.getPassById(id).then(async item=>{setPass(item);if(item)setPending(Boolean(await TransferService.getPendingTransferForPass(item.id)));}).finally(()=>setLoaded(true));},[id]);
-  if(!loaded)return <div className="px-5 pt-6 space-y-5"><Skeleton className="h-8 w-28"/><Skeleton className="h-[29rem] rounded-[1.75rem]"/><div className="grid grid-cols-2 gap-3"><Skeleton className="h-16"/><Skeleton className="h-16"/></div></div>;
+  const [pending,setPending]=useState(false),[copied,setCopied]=useState(false);
+  const fetchPass=useCallback(()=>PassService.getPassById(id),[id]);
+  const {data:pass,loading}=useClientQuery<Pass|null>({key:`private:pass:${id}`,fetcher:fetchPass,freshForMs:30_000,retainForMs:5*60_000});
+  useEffect(()=>{if(pass)TransferService.getPendingTransferForPass(pass.id).then(item=>setPending(Boolean(item))).catch(()=>setPending(false));},[pass]);
+  if(loading)return <div className="px-5 pt-6 space-y-5"><Skeleton className="h-8 w-28"/><Skeleton className="h-[29rem] rounded-[1.75rem]"/><div className="grid grid-cols-2 gap-3"><Skeleton className="h-16"/><Skeleton className="h-16"/></div></div>;
   if(!pass)return <div className="min-h-[70vh] grid place-items-center"><div className="text-center"><p className="muted">Pass not found.</p><button onClick={()=>router.back()} className="text-blue-500 text-sm mt-2">Go back</button></div></div>;
   const date=new Date(pass.eventDate),qr=`https://scenezy.app/v/${pass.credential}`;
   const copy=async()=>{await navigator.clipboard.writeText(pass.credential);setCopied(true);setTimeout(()=>setCopied(false),1600);};

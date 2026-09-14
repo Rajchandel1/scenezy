@@ -3,10 +3,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/shared/lib/supabase-client';
+import { authService, type AuthUser } from '@/features/auth';
 import { PassCardSkeleton, EmptyState, ErrorState } from '@/shared/components/ui/States';
 import { SearchBar } from '@/shared/components/ui/SearchBar';
 import { FilterTabs } from '@/shared/components/ui/FilterTabs';
 import { useSearchFilter } from '@/shared/hooks/useSearchFilter';
+import { useClientQuery } from '@/shared/hooks/useClientQuery';
 
 interface Pass {
   id: string;
@@ -56,36 +58,19 @@ function PassCard({ pass }: { pass: Pass }) {
   );
 }
 
-export default function PassesPage() {
-  const [passes, setPasses] = useState<Pass[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const loadPasses = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('Not authenticated');
-
-      // The API derives ownership from the authenticated Supabase session.
-      // Do not trust a cached browser user id here: it can become stale after
-      // signing out and into another account.
-      const res = await fetch('/api/data/passes', {
-        cache: 'no-store',
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) throw new Error('Failed to load passes');
-      setPasses(await res.json());
-    } catch {
-      setError('Could not load your passes.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadPasses(); }, [loadPasses]);
+function PassesContent({ userId }: { userId: string }) {
+  const fetchPasses = useCallback(async () => {
+    const supabase = createSupabaseBrowserClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token || session.user.id !== userId) throw new Error('Not authenticated');
+    const res = await fetch('/api/data/passes', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) throw new Error('Could not load your passes.');
+    return res.json() as Promise<Pass[]>;
+  }, [userId]);
+  const {data,loading,error,refresh}=useClientQuery({key:`private:passes:${userId}`,fetcher:fetchPasses,freshForMs:30_000,retainForMs:5*60_000});
+  const passes=data||[];
 
   const {
     searchQuery, setSearchQuery,
@@ -118,7 +103,7 @@ export default function PassesPage() {
       {loading ? (
         <div className="space-y-4"><PassCardSkeleton /><PassCardSkeleton /><PassCardSkeleton /></div>
       ) : error ? (
-        <ErrorState message={error} onRetry={loadPasses} />
+        <ErrorState message={error} onRetry={()=>void refresh()} />
       ) : noResults ? (
         <EmptyState
           icon="🎫"
@@ -133,4 +118,11 @@ export default function PassesPage() {
       )}
     </div>
   );
+}
+
+export default function PassesPage() {
+  const [user,setUser]=useState<AuthUser|null>(()=>authService.peekCurrentUser());
+  useEffect(()=>{authService.getCurrentUser().then(setUser).catch(()=>setUser(null));},[]);
+  if(!user)return <div className="px-4 pt-7 space-y-7"><div><p className="eyebrow">Digital wallet</p><h1 className="display-serif text-white text-4xl mt-1">Your passes</h1></div><PassCardSkeleton/><PassCardSkeleton/></div>;
+  return <PassesContent userId={user.id}/>;
 }

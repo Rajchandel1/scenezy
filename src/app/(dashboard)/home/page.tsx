@@ -1,6 +1,6 @@
 'use client';
 /* eslint-disable @next/next/no-img-element -- poster URLs may be signed/proxied at runtime */
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, MapPin } from 'lucide-react';
 import { authService } from '@/features/auth';
@@ -8,10 +8,12 @@ import { NotificationBell } from '@/shared/components/layout/NotificationBell';
 import { EmptyState, ErrorState, EventCardSkeleton } from '@/shared/components/ui/States';
 import { SearchBar } from '@/shared/components/ui/SearchBar';
 import { FilterTabs } from '@/shared/components/ui/FilterTabs';
+import { useClientQuery } from '@/shared/hooks/useClientQuery';
 
 interface PassType{id:string;name:string;price:number;available:number}
 interface Event{id:string;title:string;description:string;date:string;time:string;location:string;venue:string;category:string;sellerName:string;posterUrl?:string|null;passes:PassType[]}
 interface Section{id:string;title:string;eyebrow:string;layout:'FEATURE'|'GRID'|'RAIL'|'COMPACT';events:Event[]}
+interface ContentPayload {events:Event[];sections:Section[];categories:Array<{name:string}>}
 const price=(event:Event)=>event.passes.length?Math.min(...event.passes.map(pass=>pass.price)):0;
 const formatDate=(date:string)=>new Date(date).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
 
@@ -37,14 +39,17 @@ function HomeSection({section}:{section:Section}){
 }
 
 export default function HomePage(){
-  const [events,setEvents]=useState<Event[]>([]),[sections,setSections]=useState<Section[]>([]),[categories,setCategories]=useState([{id:'all',label:'All'}]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[name,setName]=useState('there'),[query,setQuery]=useState(''),[category,setCategory]=useState('all');
-  const load=useCallback(async()=>{setLoading(true);setError('');try{const response=await fetch('/api/data/content');if(!response.ok)throw new Error();const content=await response.json();setEvents(content.events||[]);setSections(content.sections);setCategories([{id:'all',label:'All'},...content.categories.map((item:{name:string})=>({id:item.name,label:item.name}))]);}catch{setError('Events could not be loaded.');}finally{setLoading(false);}},[]);
-  useEffect(()=>{load();authService.getCurrentUser().then(user=>user&&setName(user.name.split(' ')[0]));},[load]);
+  const [name,setName]=useState('there'),[query,setQuery]=useState(''),[category,setCategory]=useState('all');
+  const fetchContent=useCallback(async()=>{const response=await fetch('/api/data/content');if(!response.ok)throw new Error('Events could not be loaded.');return response.json() as Promise<ContentPayload>;},[]);
+  const {data:content,loading,error,refresh}=useClientQuery({key:'public:content',fetcher:fetchContent,freshForMs:60_000,retainForMs:10*60_000});
+  const events=content?.events||[],sections=content?.sections||[];
+  const categories=useMemo(()=>[{id:'all',label:'All'},...(content?.categories||[]).map(item=>({id:item.name,label:item.name}))],[content]);
+  useEffect(()=>{authService.getCurrentUser().then(user=>user&&setName(user.name.split(' ')[0]));},[]);
   const filtered=events.filter(event=>(category==='all'||event.category===category)&&(!query.trim()||[event.title,event.location,event.venue,event.description].some(value=>value.toLowerCase().includes(query.toLowerCase()))));
   const browsing=query.trim()||category!=='all';
   const greeting=new Date().getHours()<12?'Good morning':new Date().getHours()<18?'Good afternoon':'Good evening';
   const fallback:Section[]=[{id:'fallback-feature',title:'Featured today',eyebrow:'Editor’s selection',layout:'FEATURE',events:events.slice(0,3)},{id:'fallback-coming',title:'Coming up',eyebrow:'Worth leaving home for',layout:'COMPACT',events:events.slice(3)}];
   return <div className="px-5 sm:px-6 pt-7 pb-5 space-y-8"><header className="flex items-start justify-between"><div><p className="eyebrow">{new Date().toLocaleDateString('en-IN',{weekday:'long',month:'short',day:'numeric'})}</p><h1 className="display-serif text-[2.25rem] leading-[.98] mt-2 text-[var(--ink)]">{greeting},<br/><em className="font-normal">{name}</em></h1></div><div className="flex items-center gap-2"><NotificationBell/><Link href="/profile" className="w-10 h-10 rounded-full brand-button grid place-items-center font-bold uppercase">{name[0]}</Link></div></header><SearchBar value={query} onChange={setQuery} placeholder="Search events, venues, cities…"/><FilterTabs tabs={categories} activeTab={category} onTabChange={setCategory}/>
-    {loading?<div className="space-y-4"><EventCardSkeleton/><EventCardSkeleton/></div>:error?<ErrorState message={error} onRetry={load}/>:browsing?(filtered.length?<section><div className="flex justify-between mb-4"><h2 className="display-serif text-2xl">Search results</h2><span className="eyebrow">{filtered.length} found</span></div><HomeSection section={{id:'results',title:'',eyebrow:'',layout:'GRID',events:filtered}}/></section>:<EmptyState title="No matching scenes" description="Try another search or category." actionLabel="Clear filters" actionOnClick={()=>{setQuery('');setCategory('all');}}/>):<div className="space-y-10">{(sections.length?sections:fallback).map(section=><HomeSection key={section.id} section={section}/>)}</div>}
+    {loading?<div className="space-y-4"><EventCardSkeleton/><EventCardSkeleton/></div>:error?<ErrorState message={error} onRetry={()=>void refresh()}/>:browsing?(filtered.length?<section><div className="flex justify-between mb-4"><h2 className="display-serif text-2xl">Search results</h2><span className="eyebrow">{filtered.length} found</span></div><HomeSection section={{id:'results',title:'',eyebrow:'',layout:'GRID',events:filtered}}/></section>:<EmptyState title="No matching scenes" description="Try another search or category." actionLabel="Clear filters" actionOnClick={()=>{setQuery('');setCategory('all');}}/>):<div className="space-y-10">{(sections.length?sections:fallback).map(section=><HomeSection key={section.id} section={section}/>)}</div>}
   </div>;
 }

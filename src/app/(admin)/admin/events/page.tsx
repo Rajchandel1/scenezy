@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { LoadingButton } from '@/shared/components/ui/LoadingButton';
 import { Skeleton } from '@/shared/components/ui/States';
 import { useActionDialog } from '@/shared/components/ui/ActionDialog';
+import { invalidateClientCache } from '@/shared/lib/client-data-cache';
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -27,12 +28,12 @@ export default function AdminEventsPage() {
     const reason = action === 'reject-event' ? await ask({title:'Request event changes',description:'Tell the seller exactly what must be corrected before resubmission.',confirmLabel:'Send to seller',field:{label:'Change request',placeholder:'Describe the required changes…',required:true}}) : action === 'close-event' ? await ask({title:'Close this event?',description:'It will stop appearing to customers. You can continue it again later.',confirmLabel:'Close event',tone:'danger'}) : action === 'continue-event' ? await ask({title:'Continue this event?',description:'It will become live and visible to customers again.',confirmLabel:'Continue event'}) : undefined;
     if ((action === 'reject-event' || action === 'close-event' || action === 'continue-event') && !reason) return;
     setActionId(`${action}:${eventId}`); setError('');
-    try { const result = await fetch('/api/data/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, eventId, reason }) }); if (!result.ok) throw new Error(); const res = await fetch('/api/data/admin?action=events'); if (!res.ok) throw new Error(); setEvents(await res.json()); }
+    try { const result = await fetch('/api/data/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, eventId, reason }) }); if (!result.ok) throw new Error(); invalidateClientCache('public:content');invalidateClientCache(`public:event:${eventId}`);const res = await fetch('/api/data/admin?action=events'); if (!res.ok) throw new Error(); setEvents(await res.json()); }
     catch { setError('The event could not be updated. Try again.'); } finally { setActionId(''); }
   };
 
   const filtered = filter === 'ALL' ? events : events.filter(e => e.status === filter);
-  const reassign=async(eventId:string,category:string)=>{setActionId(`category:${eventId}`);setError('');try{const response=await fetch('/api/data/content',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set-event-category',eventId,category})});if(!response.ok)throw new Error();setEvents(current=>current.map(event=>event.id===eventId?{...event,category}:event));}catch{setError('Category could not be reassigned.');}finally{setActionId('');}};
+  const reassign=async(eventId:string,category:string)=>{setActionId(`category:${eventId}`);setError('');try{const response=await fetch('/api/data/content',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set-event-category',eventId,category})});if(!response.ok)throw new Error();invalidateClientCache('public:content');invalidateClientCache(`public:event:${eventId}`);setEvents(current=>current.map(event=>event.id===eventId?{...event,category}:event));}catch{setError('Category could not be reassigned.');}finally{setActionId('');}};
   const setPoster=async(item:any)=>{const posterUrl=await ask({title:'Set event poster',description:'This image appears in Spotlight, Grid, Rail and event details.',confirmLabel:'Save poster',field:{label:'Public HTTPS image URL',defaultValue:item.posterUrl||'',placeholder:'https://…/poster.jpg'}});if(posterUrl===null)return;setActionId(`poster:${item.id}`);try{const response=await fetch('/api/data/content',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set-event-poster',eventId:item.id,posterUrl})});const data=await response.json();if(!response.ok)throw new Error(data.error);setEvents(current=>current.map(event=>event.id===item.id?{...event,posterUrl}:event));}catch(e){setError(e instanceof Error?e.message:'Poster could not be updated.');}finally{setActionId('');}};
 
   const statusColors: Record<string, string> = {

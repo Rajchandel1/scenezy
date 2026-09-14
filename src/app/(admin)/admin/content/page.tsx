@@ -4,6 +4,7 @@ import { Check, Eye, EyeOff, GripVertical, LayoutGrid, Pencil, Plus, Rows3, Spar
 import { LoadingButton } from '@/shared/components/ui/LoadingButton';
 import { DashboardSkeleton } from '@/shared/components/ui/States';
 import { useActionDialog } from '@/shared/components/ui/ActionDialog';
+import { invalidateClientCache } from '@/shared/lib/client-data-cache';
 
 type Category={id:string;name:string;active:boolean;sortOrder:number};
 type Event={id:string;title:string;category:string;status:string;date:string};
@@ -19,7 +20,7 @@ export default function ContentPage(){
   const {ask,dialog}=useActionDialog();
   const load=useCallback(async()=>{setError('');try{const response=await fetch('/api/data/content?scope=admin');if(!response.ok)throw new Error();const data=await response.json();setCategories(data.categories);setEvents(data.events);setSections(data.sections);}catch{setError('Could not load homepage controls.');}finally{setLoading(false);}},[]);
   useEffect(()=>{load();},[load]);
-  const act=async(body:Record<string,unknown>)=>{const response=await fetch('/api/data/content',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw new Error(data.error||'Update failed');return data;};
+  const act=async(body:Record<string,unknown>)=>{const response=await fetch('/api/data/content',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw new Error(data.error||'Update failed');invalidateClientCache('public:content');invalidateClientCache('public:event:');return data;};
   const addCategory=async()=>{if(!categoryName.trim())return;setSaving('category');setError('');try{await act({action:'create-category',name:categoryName,sortOrder:categories.length*10});setCategoryName('');await load();}catch(e){setError(e instanceof Error?e.message:'Could not add category');}finally{setSaving('');}};
   const editCategory=async(category:Category)=>{const name=await ask({title:'Rename category',description:'Every event currently using this category will be updated too.',confirmLabel:'Save name',field:{label:'Category name',defaultValue:category.name,required:true}});if(!name)return;setSaving(category.id);try{await act({action:'update-category',...category,name});await load();}catch(e){setError(e instanceof Error?e.message:'Could not update category');}finally{setSaving('');}};
   const toggleCategory=async(category:Category)=>{setSaving(category.id);try{await act({action:'update-category',...category,active:!category.active});await load();}catch(e){setError(e instanceof Error?e.message:'Could not update category');}finally{setSaving('');}};

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/features/auth';
 import LandingPage from './(marketing)/page';
-import { PassLogo } from '@/shared/components/branding/PassLogo';
+import { LogoVideoLoader } from '@/shared/components/branding/LogoVideoLoader';
 
 export default function RootPage() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function RootPage() {
   if (checking) {
     return (
       <div className="min-h-screen app-shell flex items-center justify-center">
-        <PassLogo className="w-14 h-14 animate-pulse"/>
+        <LogoVideoLoader size="lg" />
       </div>
     );
   }

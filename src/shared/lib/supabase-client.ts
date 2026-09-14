@@ -2,7 +2,7 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 
-declare global{interface Window{__SCENEZY_CONFIG__?:{supabaseUrl:string;supabaseAnonKey:string}}}
+declare global{interface Window{__SCENEZY_CONFIG__?:{supabaseUrl:string;supabaseAnonKey:string;checkoutMode:'WHATSAPP'|'RAZORPAY';whatsappOrderNumber:string}}}
 
 export function createSupabaseBrowserClient() {
   const config=window.__SCENEZY_CONFIG__;

@@ -18,6 +18,7 @@ function SignUpContent() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showVerification,setShowVerification] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,10 +51,16 @@ function SignUpContent() {
 
   const handleResend = async () => {
     setResending(true);
+    setResent(false);
+    setError('');
     try {
       await authService.resendVerification(form.email);
-    } catch {}
-    setTimeout(() => setResending(false), 2000);
+      setResent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verification email could not be sent. Please try again shortly.');
+    } finally {
+      setResending(false);
+    }
   };
 
   if (showVerification) {
@@ -68,12 +75,14 @@ function SignUpContent() {
           <h2 className="text-white text-xl font-bold">Check your email</h2>
           <p className="text-neutral-400 text-sm">We sent a verification link to</p>
           <p className="text-[#2563eb] font-medium text-sm">{form.email}</p>
-          <p className="text-neutral-500 text-xs mt-2">Click the link to activate your account.</p>
+          <p className="text-neutral-500 text-xs mt-2">Click the link to activate your account. Check spam too.</p>
+          <p className="text-neutral-600 text-xs">If this address was used before, try signing in or resetting its password.</p>
         </div>
+        {error && <div className="bg-red-950/30 border border-red-900/50 text-red-400 text-sm rounded-xl px-4 py-3">{error}</div>}
         <div className="space-y-2 pt-2">
           <button onClick={handleResend} disabled={resending}
             className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 font-medium py-3 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 text-sm">
-            {resending ? 'Sent! Check inbox ✓' : 'Resend verification email'}
+            {resending ? 'Sending...' : resent ? 'Sent - check your inbox' : 'Resend verification email'}
           </button>
           <Link href="/sign-in" className="block text-neutral-500 text-sm hover:text-[#2563eb] transition-colors">
             ← Back to sign in

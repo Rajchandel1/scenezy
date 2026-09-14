@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authService } from '@/features/auth';
 import { useActionDialog } from '@/shared/components/ui/ActionDialog';
+import { invalidateClientCache } from '@/shared/lib/client-data-cache';
 
 export default function AdminPassesPage() {
   const [passes, setPasses] = useState<any[]>([]);
@@ -25,6 +26,8 @@ export default function AdminPassesPage() {
     const reason = await ask({title:'Revoke this pass?',description:'The holder will no longer be able to use it at entry.',confirmLabel:'Revoke pass',tone:'danger',field:{label:'Reason',placeholder:'Why is this pass being revoked?',required:true}});
     if (!reason) return;
     await fetch('/api/data/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'revoke-pass', passId, reason, adminId: admin?.id, adminName: admin?.name }) });
+    invalidateClientCache('private:passes:');
+    invalidateClientCache(`private:pass:${passId}`);
     const res = await fetch('/api/data/admin?action=passes');
     setPasses(await res.json());
   };

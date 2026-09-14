@@ -1,18 +1,22 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Heart, MapPin, Minus, Plus, Share2 } from 'lucide-react';
 import { LoadingButton } from '@/shared/components/ui/LoadingButton';
 import { Skeleton } from '@/shared/components/ui/States';
+import { useClientQuery } from '@/shared/hooks/useClientQuery';
 
 interface PassType { id:string;name:string;price:number;benefits:string;available:number;sold:number }
 interface Event { id:string;title:string;description:string;date:string;time:string;location:string;venue:string;category:string;sellerName:string;posterUrl?:string|null;passes:PassType[] }
 
 export default function EventDetailPage(){
   const {id}=useParams<{id:string}>(),router=useRouter();
-  const [event,setEvent]=useState<Event|null>(null),[loaded,setLoaded]=useState(false),[selected,setSelected]=useState(''),[quantity,setQuantity]=useState(1),[liked,setLiked]=useState(false),[moving,setMoving]=useState(false);
-  useEffect(()=>{fetch(`/api/data/events?id=${encodeURIComponent(id)}`).then(async response=>{if(!response.ok)throw new Error();const found:Event|null=await response.json();setEvent(found);if(found?.passes[0])setSelected(found.passes[0].id);}).finally(()=>setLoaded(true));},[id]);
-  if(!loaded)return <div className="min-h-screen"><Skeleton className="h-[32vh] min-h-[250px] rounded-none"/><div className="-mt-8 relative surface rounded-t-[2rem] p-6 space-y-5"><Skeleton className="h-8 w-2/3"/><Skeleton className="h-20"/><Skeleton className="h-16"/></div></div>;
+  const [selected,setSelected]=useState(''),[quantity,setQuantity]=useState(1),[liked,setLiked]=useState(false),[moving,setMoving]=useState(false);
+  const selectedForEvent=useRef('');
+  const fetchEvent=useCallback(async()=>{const response=await fetch(`/api/data/events?id=${encodeURIComponent(id)}`);if(!response.ok)throw new Error('Event could not be loaded.');return response.json() as Promise<Event|null>;},[id]);
+  const {data:event,loading}=useClientQuery({key:`public:event:${id}`,fetcher:fetchEvent,freshForMs:60_000,retainForMs:10*60_000});
+  useEffect(()=>{if(event&&selectedForEvent.current!==event.id){selectedForEvent.current=event.id;setSelected(event.passes[0]?.id||'');setQuantity(1);}},[event]);
+  if(loading)return <div className="min-h-screen"><Skeleton className="h-[32vh] min-h-[250px] rounded-none"/><div className="-mt-8 relative surface rounded-t-[2rem] p-6 space-y-5"><Skeleton className="h-8 w-2/3"/><Skeleton className="h-20"/><Skeleton className="h-16"/></div></div>;
   if(!event)return <div className="min-h-[70vh] grid place-items-center text-center"><div><p className="muted">Event not found.</p><button onClick={()=>router.back()} className="text-blue-500 text-sm mt-2">Go back</button></div></div>;
   const pass=event.passes.find(item=>item.id===selected),total=(pass?.price||0)*quantity,date=new Date(event.date),soldOut=!pass||pass.available<quantity;
   const buy=()=>{if(!pass)return;setMoving(true);router.push(`/checkout?eventId=${event.id}&passTypeId=${pass.id}&quantity=${quantity}`);};

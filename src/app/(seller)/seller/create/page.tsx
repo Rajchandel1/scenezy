@@ -6,6 +6,7 @@ import { authService } from '@/features/auth';
 import { SellerService } from '@/features/seller';
 import { LoadingButton } from '@/shared/components/ui/LoadingButton';
 import { ImagePlus, X } from 'lucide-react';
+import { invalidateClientCache } from '@/shared/lib/client-data-cache';
 
 const FALLBACK_CATEGORIES = ['Party', 'Music', 'Conference', 'Comedy', 'Business', 'Sports', 'Workshop', 'Other'];
 
@@ -65,6 +66,7 @@ export default function CreateEventPage() {
         sellerName: user.name,
         passes: form.passes.filter(p => p.name && p.price > 0),
       });
+      invalidateClientCache('public:content');
       setCreated(true);
     } catch (err) {
       if(uploadedPath)fetch('/api/data/uploads/event-poster',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:uploadedPath})}).catch(()=>undefined);

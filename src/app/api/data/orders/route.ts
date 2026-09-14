@@ -17,11 +17,11 @@ export async function GET(req:NextRequest){
 }
 
 export async function POST(req:NextRequest){
-  const auth=await requireApiUser(['USER']);
-  if(auth.error)return auth.error;
-  const limit=await checkRateLimit(`checkout:${auth.profile.id}`,20,60);
-  if(!limit.allowed)return rateLimitResponse(limit.resetAt);
   try{
+    const auth=await requireApiUser(['USER']);
+    if(auth.error)return auth.error;
+    const limit=await checkRateLimit(`checkout:${auth.profile.id}`,20,60);
+    if(!limit.allowed)return rateLimitResponse(limit.resetAt);
     const body=await req.json();
     if(body.action==='verify'){
       const providerOrderId=String(body.razorpay_order_id||''),paymentId=String(body.razorpay_payment_id||''),signature=String(body.razorpay_signature||'');

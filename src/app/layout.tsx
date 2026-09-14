@@ -3,6 +3,7 @@ import './globals.css';
 import { ThemeProvider } from '@/shared/components/theme/ThemeProvider';
 import { PWARegister } from '@/shared/components/layout/PWARegister';
 import { NavigationFeedback } from '@/shared/components/layout/NavigationFeedback';
+import { OpeningSplash } from '@/shared/components/branding/OpeningSplash';
 
 export const metadata: Metadata = {
   title: 'Scenezy — Discover Events & Manage Passes',
@@ -25,7 +26,12 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const runtimeConfig=JSON.stringify({supabaseUrl:process.env.SUPABASE_URL||'',supabaseAnonKey:process.env.SUPABASE_ANON_KEY||''}).replace(/</g,'\\u003c');
+  const runtimeConfig=JSON.stringify({
+    supabaseUrl:process.env.SUPABASE_URL||'',
+    supabaseAnonKey:process.env.SUPABASE_ANON_KEY||'',
+    checkoutMode:process.env.CHECKOUT_MODE==='RAZORPAY'?'RAZORPAY':'WHATSAPP',
+    whatsappOrderNumber:process.env.WHATSAPP_ORDER_NUMBER||'919265461135',
+  }).replace(/</g,'\\u003c');
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -36,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className="text-white antialiased min-h-screen">
-        <ThemeProvider><PWARegister/><NavigationFeedback/>{children}</ThemeProvider>
+        <ThemeProvider><OpeningSplash/><PWARegister/><NavigationFeedback/>{children}</ThemeProvider>
       </body>
     </html>
   );

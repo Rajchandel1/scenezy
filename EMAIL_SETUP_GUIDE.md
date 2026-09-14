@@ -1,110 +1,94 @@
-# 📧 Resend + Supabase Email Setup Guide
+# Scenezy email authentication setup
 
-## STEP 1: Configure Resend as SMTP in Supabase
+The app uses Supabase Auth and Resend SMTP. Do not put the Resend API key in
+browser code or in a `NEXT_PUBLIC_*` variable.
 
-1. Go to: https://resend.com/smtp
-2. Note these values:
-   - Host: smtp.resend.com
-   - Port: 465
-   - Username: resend
-   - Password: YOUR_RESEND_API_KEY (same as API key)
+## 1. Enable email confirmation
 
-3. Go to: Supabase Dashboard → Project Settings → Auth → SMTP Settings
-4. Enable "Enable Custom SMTP"
-5. Fill in:
-   - Sender email: noreply@scenezy.app (or your verified domain on Resend)
-   - Sender name: Scenezy
-   - Host: smtp.resend.com
-   - Port number: 465
-   - Username: resend
-   - Password: YOUR_RESEND_API_KEY
-6. Click Save
+In Supabase Dashboard:
 
-## STEP 2: Add Custom Email Templates in Supabase
+1. Open **Authentication -> Providers -> Email**.
+2. Keep **Allow new users to sign up** enabled.
+3. Enable **Confirm email**.
+4. Save.
 
-Go to: Supabase Dashboard → Authentication → Email Templates
+When this is disabled, Supabase treats every email as confirmed and signup
+immediately creates a signed-in session.
 
-### Template 1: Confirm Signup
-Paste this in the "Confirm signup" template body:
+## 2. Configure URLs
 
-```html
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body style="margin:0;padding:0;background:#0a0a0a;font-family:system-ui,-apple-system,sans-serif">
-  <div style="max-width:400px;margin:0 auto;padding:40px 20px">
-    <div style="text-align:center;margin-bottom:32px">
-      <div style="display:inline-block;width:48px;height:48px;background:#c4f000;border-radius:12px;line-height:48px;font-size:24px;font-weight:900;color:#0a0a0a">P</div>
-      <h1 style="color:white;font-size:24px;margin:16px 0 4px">Welcome to Scenezy!</h1>
-      <p style="color:#737373;font-size:14px;margin:0">Your events. Your passes. Simple.</p>
-    </div>
-    <div style="background:#171717;border:1px solid #262626;border-radius:16px;padding:24px;margin-bottom:24px">
-      <p style="color:#d4d4d4;font-size:14px;line-height:1.6;margin:0 0 16px">
-        Thanks for joining Scenezy! Verify your email to start discovering events.
-      </p>
-      <a href="{{ .ConfirmationURL }}" style="display:block;width:100%;background:#c4f000;color:#0a0a0a;font-weight:700;text-align:center;padding:14px;border-radius:12px;text-decoration:none;font-size:15px">
-        Verify Email
-      </a>
-    </div>
-    <p style="color:#525252;font-size:11px;text-align:center;margin:0">
-      Paper Plane UX · Jet Engine Backend<br>
-      If you didn't create this account, ignore this email.
-    </p>
-  </div>
-</body>
-</html>
-```
+Open **Authentication -> URL Configuration**.
 
-### Template 2: Reset Password
-Paste this in the "Reset password" template body:
+- Site URL: `https://scenezy.vercel.app`
+- Add redirect URL: `https://scenezy.vercel.app/auth/confirm`
+- For local testing also add: `http://localhost:3000/auth/confirm`
+- Keep the existing Google OAuth callback URL if Google sign-in is enabled.
+
+## 3. Configure Resend SMTP
+
+Open **Project Settings -> Authentication -> SMTP Settings**, enable custom
+SMTP, then enter:
+
+- Sender name: `Scenezy`
+- Sender email: an address on your verified Resend domain
+- Host: `smtp.resend.com`
+- Port: `465`
+- Username: `resend`
+- Password: your Resend API key
+
+For production, verify your own sending domain in Resend. Do not repeatedly
+send to made-up addresses: bounces reduce sender reputation.
+
+## 4. Confirm signup template
+
+Open **Authentication -> Email Templates -> Confirm signup** and use this link
+inside the button:
 
 ```html
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body style="margin:0;padding:0;background:#0a0a0a;font-family:system-ui,-apple-system,sans-serif">
-  <div style="max-width:400px;margin:0 auto;padding:40px 20px">
-    <div style="text-align:center;margin-bottom:32px">
-      <div style="display:inline-block;width:48px;height:48px;background:#c4f000;border-radius:12px;line-height:48px;font-size:24px;font-weight:900;color:#0a0a0a">P</div>
-    </div>
-    <div style="background:#171717;border:1px solid #262626;border-radius:16px;padding:24px;margin-bottom:24px">
-      <h2 style="color:white;font-size:18px;margin:0 0 12px">Reset Password</h2>
-      <p style="color:#a3a3a3;font-size:14px;line-height:1.6;margin:0 0 20px">
-        Click below to reset your password. Link expires in 1 hour.
-      </p>
-      <a href="{{ .ConfirmationURL }}" style="display:block;width:100%;background:#c4f000;color:#0a0a0a;font-weight:700;text-align:center;padding:14px;border-radius:12px;text-decoration:none;font-size:15px">
-        Reset Password
-      </a>
-    </div>
-    <p style="color:#525252;font-size:11px;text-align:center;margin:0">
-      Didn't request this? Ignore this email.
-    </p>
-  </div>
-</body>
-</html>
+<a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email"
+   style="display:block;background:#2563eb;color:#ffffff;text-align:center;padding:14px 20px;border-radius:12px;text-decoration:none;font-weight:700">
+  Verify email
+</a>
 ```
 
-### Template 3: Magic Link (if using passwordless)
-Same as confirm signup but change button text to "Sign In"
+Suggested subject: `Verify your Scenezy email`
 
-## STEP 3: Verify Domain on Resend (Important!)
+## 5. Reset password template
 
-For emails to not go to spam:
-1. Go to: resend.com/domains
-2. Add your domain (or use their free onboarding domain for testing)
-3. Add DNS records they provide
-4. Once verified, update sender email in Supabase SMTP to: noreply@yourdomain.com
+Open **Authentication -> Email Templates -> Reset password** and use this link
+inside the button:
 
-## STEP 4: Test
+```html
+<a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery"
+   style="display:block;background:#2563eb;color:#ffffff;text-align:center;padding:14px 20px;border-radius:12px;text-decoration:none;font-weight:700">
+  Reset password
+</a>
+```
 
-1. npm run dev
-2. Sign up with a real email
-3. Check inbox — should see a beautiful dark-themed Scenezy email
-4. Click verify link → redirected to app → logged in
+Suggested subject: `Reset your Scenezy password`
 
-## ⚠️ Important Notes
+These token-hash links are verified by `/auth/confirm` on the server and store
+the session in cookies. They work when a user opens the email from a different
+browser or mail app and do not depend on a browser-local PKCE code verifier.
 
-- Resend free tier: 3000 emails/month, 100/day
-- Without custom domain: emails come from "onboarding@resend.dev" (fine for testing)
-- With custom domain: emails come from "noreply@yourdomain.com" (production)
-- Supabase {{ .ConfirmationURL }} is the magic variable for verification links
+## 6. Deleted-account checks
+
+Scenezy profiles are stored in `public.users`, while login identities are
+stored separately in Supabase **Authentication -> Users** (`auth.users`).
+Deleting only the `public.users` row does not delete the login identity. If a
+test account must be recreated with the same email, delete that test identity
+from **Authentication -> Users** too, then sign up again. Do not run broad SQL
+deletes against either table.
+
+## 7. Test
+
+1. Use a real email address not currently listed in Authentication -> Users.
+2. Create an account. The app must show the check-email screen and no dashboard.
+3. Open the verification email and confirm it reaches `/auth/confirm`, then the
+   correct dashboard.
+4. Sign out, request password reset, and open the email in another browser.
+5. Set a new password and sign in with it.
+
+Supabase deliberately returns a generic success response for password reset
+requests when no account exists, so the app must not reveal whether an email is
+registered.

@@ -8,12 +8,23 @@ import { usePWAInstall } from '@/shared/lib/use-pwa';
 import { useTheme, type ThemePreference } from '@/shared/components/theme/ThemeProvider';
 import { LoadingButton } from '@/shared/components/ui/LoadingButton';
 import { Skeleton } from '@/shared/components/ui/States';
+import { PassService, type Pass } from '@/features/passes';
+import { OrderService } from '@/features/orders';
+import { fetchClientCache, readClientCache } from '@/shared/lib/client-data-cache';
+
+function cachedStats(userId?:string){
+  if(!userId)return {passes:0,active:0,bookings:0};
+  const passes=readClientCache<Pass[]>(`private:passes:${userId}`)?.data||[];
+  const orders=readClientCache<unknown[]>(`private:orders:${userId}`)?.data||[];
+  return {passes:passes.length,active:passes.filter(pass=>pass.status==='ACTIVE').length,bookings:orders.length};
+}
 
 export default function ProfilePage(){
-  const router=useRouter(),[user,setUser]=useState<AuthUser|null>(null),[loggingOut,setLoggingOut]=useState(false);
-  const [stats,setStats]=useState({passes:0,active:0,bookings:0});
+  const initialUser=authService.peekCurrentUser();
+  const router=useRouter(),[user,setUser]=useState<AuthUser|null>(initialUser),[loggingOut,setLoggingOut]=useState(false);
+  const [stats,setStats]=useState(()=>cachedStats(initialUser?.id));
   const {theme,setTheme}=useTheme(),{canInstall,isInstalled,requiresManualInstall,install}=usePWAInstall();const [showInstallHelp,setShowInstallHelp]=useState(false);
-  useEffect(()=>{authService.getCurrentUser().then(async account=>{setUser(account);if(!account)return;const [passesResponse,ordersResponse]=await Promise.all([fetch(`/api/data/passes?userId=${account.id}`),fetch(`/api/data/orders?userId=${account.id}`)]);const passes=passesResponse.ok?await passesResponse.json():[],orders=ordersResponse.ok?await ordersResponse.json():[];setStats({passes:passes.length,active:passes.filter((pass:{status:string})=>pass.status==='ACTIVE').length,bookings:orders.length});});},[]);
+  useEffect(()=>{authService.getCurrentUser().then(async account=>{setUser(account);if(!account)return;const [passes,orders]=await Promise.all([fetchClientCache(`private:passes:${account.id}`,()=>PassService.getPassesByUser(account.id),{freshForMs:30_000}),fetchClientCache(`private:orders:${account.id}`,()=>OrderService.getOrdersByUser(account.id),{freshForMs:30_000})]);setStats({passes:passes.length,active:passes.filter(pass=>pass.status==='ACTIVE').length,bookings:orders.length});}).catch(()=>setUser(null));},[]);
   const logout=async()=>{setLoggingOut(true);await authService.logout();router.replace('/');router.refresh();};
   const links=user?.role==='SELLER'?[['/seller/events','Manage events',CalendarDays],['/seller/payments','Payments',WalletCards],['/scanner','Entry scanner',QrCode]] as const:user?.role==='ADMIN'?[['/admin','Admin office',UserRound],['/scanner','Entry scanner',QrCode]] as const:[['/passes','My passes',Ticket],['/orders','Order history',CalendarDays]] as const;
   return <div className="px-5 sm:px-6 pt-7 pb-8 space-y-8"><header><p className="eyebrow">Account</p><h1 className="display-serif text-white text-4xl mt-1">Your profile</h1></header>
