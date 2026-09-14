@@ -4,6 +4,7 @@ import { db } from '@/shared/db';
 import { categories, events, homeSections, passTypes } from '@/shared/db/schema';
 import { requireApiUser } from '@/shared/lib/api-auth';
 import { eventPosterUrl } from '@/shared/lib/event-poster';
+import { eventSortTimestamp } from '@/shared/lib/event-date';
 
 const layouts=['FEATURE','GRID','RAIL','COMPACT'] as const;
 const slugify=(value:string)=>value.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
@@ -27,7 +28,7 @@ export async function GET(req:NextRequest){
   // sections and makes the entire home dashboard look broken.
   const activeEvents=await db.select().from(events).where(eq(events.status,'ACTIVE')).orderBy(asc(events.date));
   const types=activeEvents.length?await db.select().from(passTypes).where(inArray(passTypes.eventId,activeEvents.map(event=>event.id))):[];
-  const enrichedEvents=activeEvents.map(event=>({...event,posterUrl:eventPosterUrl(event.posterUrl),passes:types.filter(type=>type.eventId===event.id)}));
+  const enrichedEvents=activeEvents.map(event=>({...event,posterUrl:eventPosterUrl(event.posterUrl),passes:types.filter(type=>type.eventId===event.id)})).sort((a,b)=>eventSortTimestamp(a.date)-eventSortTimestamp(b.date));
   const payload={
     categories:categoryRows.filter(category=>category.active),
     events:enrichedEvents,

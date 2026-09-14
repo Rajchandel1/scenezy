@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/db';
-import { passes, passTypes } from '@/shared/db/schema';
+import { events, passes, passTypes } from '@/shared/db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { requireApiUser } from '@/shared/lib/api-auth';
 
@@ -21,7 +21,9 @@ export async function GET(req: NextRequest) {
     const result = await db.select().from(passes).where(eq(passes.id, passId)).limit(1);
     const pass = result[0];
     if (pass && auth.profile.role !== 'ADMIN' && pass.ownerUserId !== auth.profile.id) return Response.json({ error:'Forbidden' }, { status:403 });
-    return Response.json(pass || null);
+    if(!pass)return Response.json(null);
+    const [event]=await db.select({locationUrl:events.locationUrl}).from(events).where(eq(events.id,pass.eventId)).limit(1);
+    return Response.json({...pass,eventLocationUrl:event?.locationUrl||null});
   }
 
   if (userId || auth.profile.role !== 'ADMIN') {

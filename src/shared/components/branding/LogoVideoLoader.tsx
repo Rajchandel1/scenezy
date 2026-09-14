@@ -18,7 +18,7 @@ export function LogoVideoLoader({
   size = 'lg',
   showText = false,
   text,
-  loop = true,
+  loop = false,
   playbackRate = 1,
   onEnded,
   onError,

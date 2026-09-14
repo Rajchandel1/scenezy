@@ -7,6 +7,7 @@ import { ArrowUpRight, Download, Share2 } from 'lucide-react';
 import { PassLogo } from '@/shared/components/branding/PassLogo';
 import { usePWAInstall } from '@/shared/lib/use-pwa';
 import { PublicFooter } from '@/shared/components/legal/PublicFooter';
+import { formatEventDate } from '@/shared/lib/event-date';
 
 type PublicEvent = {
   id: string;
@@ -396,7 +397,7 @@ export default function LandingPage() {
                   <span className="min-w-0">
                     <span className="block truncate text-lg font-semibold tracking-tight transition-transform duration-500 group-hover:translate-x-1.5">{event.title}</span>
                     <span className="mt-1 block truncate font-mono text-[11px] uppercase tracking-[.16em] text-white/40">
-                      {event.location} · {new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      {event.location} · {formatEventDate(event.date)}
                     </span>
                   </span>
                   <span className="text-right">

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowRight, CalendarPlus } from 'lucide-react';
 import { authService } from '@/features/auth';
 import { EventCardSkeleton, PageLoading } from '@/shared/components/ui/States';
+import { formatEventDate } from '@/shared/lib/event-date';
 
 interface EnrichedEvent {
   id: string; title: string; date: string; time: string; location: string;
@@ -98,7 +99,7 @@ function EventsContent() {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-white font-semibold text-sm">{event.title}</h3>
-                  <p className="text-neutral-500 text-xs mt-0.5">{new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {event.location}</p>
+                  <p className="text-neutral-500 text-xs mt-0.5">{formatEventDate(event.date,{day:'numeric',month:'short',year:'numeric'})} · {event.location}</p>
                 </div>
                 <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded border font-medium ${statusColors[event.status] || statusColors.CANCELLED}`}>
                   {event.status === 'CANCELLED' ? 'CLOSED' : event.status.replace('_', ' ')}

@@ -22,7 +22,7 @@ export default function CreateEventPage() {
   const [posterFile,setPosterFile]=useState<File|null>(null),[posterPreview,setPosterPreview]=useState('');
 
   const [form, setForm] = useState({
-    title: '', description: '', posterUrl: '', date: '', time: '', location: '', venue: '', category: 'Party',
+    title: '', description: '', posterUrl: '', date: '', time: '', location: '', locationUrl: '', venue: '', category: 'Party',
     passes: [{ name: 'General', price: 499, benefits: 'Standard entry', available: 100, transferAllowed: true }] as PassInput[],
   });
 
@@ -88,7 +88,7 @@ export default function CreateEventPage() {
 
   const canProceed = () => {
     if (step === 1) return form.title.trim().length > 0;
-    if (step === 2) return form.date && form.time;
+    if (step === 2) return Boolean(form.date.trim());
     if (step === 3) return form.location.trim() && form.venue.trim();
     if (step === 4) return form.passes.some(p => p.name && p.price > 0);
     return true;
@@ -108,7 +108,7 @@ export default function CreateEventPage() {
           </div>
           <div className="space-y-2">
             <button onClick={() => router.push('/seller')} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl active:scale-[0.98] transition-all">Back to Dashboard</button>
-            <button onClick={() => { removePoster(); setCreated(false); setStep(1); setForm({ title: '', description: '', posterUrl: '', date: '', time: '', location: '', venue: '', category: 'Party', passes: [{ name: 'General', price: 499, benefits: 'Standard entry', available: 100, transferAllowed: true }] }); }} className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 font-medium py-3 rounded-xl active:scale-[0.98] transition-all">Create Another</button>
+            <button onClick={() => { removePoster(); setCreated(false); setStep(1); setForm({ title: '', description: '', posterUrl: '', date: '', time: '', location: '', locationUrl: '', venue: '', category: 'Party', passes: [{ name: 'General', price: 499, benefits: 'Standard entry', available: 100, transferAllowed: true }] }); }} className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 font-medium py-3 rounded-xl active:scale-[0.98] transition-all">Create Another</button>
           </div>
         </div>
       </div>
@@ -154,7 +154,14 @@ export default function CreateEventPage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-1.5"><label className="text-neutral-400 text-xs uppercase tracking-wider">Event poster</label>{posterPreview?<div className="relative h-48 rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900"><div className="absolute inset-0 bg-cover bg-center" style={{backgroundImage:`url(${posterPreview})`}}/><div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent"/><div className="absolute left-4 bottom-3 text-white"><p className="text-xs font-semibold truncate max-w-56">{posterFile?.name}</p><p className="text-[10px] text-white/60">{posterFile?(posterFile.size/1024/1024).toFixed(1):0} MB · Ready to upload</p></div><button type="button" onClick={removePoster} className="absolute right-3 top-3 w-9 h-9 rounded-full bg-black/60 text-white grid place-items-center"><X size={16}/></button></div>:<label className="h-40 rounded-2xl border border-dashed border-neutral-700 bg-neutral-900/60 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-500 transition"><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={event=>choosePoster(event.target.files?.[0])}/><span className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-400 grid place-items-center"><ImagePlus size={20}/></span><span className="text-sm text-white font-semibold mt-3">Choose poster image</span><span className="text-[10px] text-neutral-500 mt-1">JPG, PNG or WebP · Max 6 MB</span></label>}<p className="text-neutral-600 text-[10px]">Recommended portrait or 4:5 artwork, at least 1200px wide.</p></div>
+            <div className="space-y-1.5">
+              <label className="text-neutral-400 text-xs uppercase tracking-wider">Event poster</label>
+              {posterPreview?<div className="relative h-48 rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900"><div className="absolute inset-0 bg-cover bg-center" style={{backgroundImage:`url(${posterPreview})`}}/><div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent"/><div className="absolute left-4 bottom-3 text-white"><p className="text-xs font-semibold truncate max-w-56">{posterFile?.name}</p><p className="text-[10px] text-white/60">{posterFile?(posterFile.size/1024/1024).toFixed(1):0} MB · Ready to upload</p></div><button type="button" onClick={removePoster} className="absolute right-3 top-3 w-9 h-9 rounded-full bg-black/60 text-white grid place-items-center"><X size={16}/></button></div>:<label className="h-40 rounded-2xl border border-dashed border-neutral-700 bg-neutral-900/60 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-500 transition"><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={event=>choosePoster(event.target.files?.[0])}/><span className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-400 grid place-items-center"><ImagePlus size={20}/></span><span className="text-sm text-white font-semibold mt-3">Choose poster image</span><span className="text-[10px] text-neutral-500 mt-1">JPG, PNG or WebP · Max 6 MB</span></label>}
+              <p className="text-neutral-600 text-[10px]">Recommended portrait or 4:5 artwork, at least 1200px wide.</p>
+              <div className="flex items-center gap-3 py-1"><span className="h-px flex-1 bg-neutral-800"/><span className="text-[9px] font-bold uppercase tracking-[.18em] text-neutral-600">or use a link</span><span className="h-px flex-1 bg-neutral-800"/></div>
+              <input type="url" value={form.posterUrl} disabled={Boolean(posterFile)} onChange={event=>setForm({...form,posterUrl:event.target.value})} placeholder="https://example.com/event-poster.jpg" className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] transition-all disabled:opacity-40"/>
+              <p className="text-neutral-600 text-[10px]">Paste a public HTTPS image link if you do not want to upload a file.</p>
+            </div>
           </div>
         </div>
       )}
@@ -164,12 +171,13 @@ export default function CreateEventPage() {
           <h2 className="text-white font-semibold">When is it?</h2>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <label className="text-neutral-400 text-xs uppercase tracking-wider">Date</label>
-              <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
+              <label className="text-neutral-400 text-xs uppercase tracking-wider">Date or date range</label>
+              <input type="text" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} placeholder="11 - 15 Aug 2026"
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#2563eb] transition-all" />
+              <p className="text-neutral-600 text-[10px]">Use any clear format, for example 11 Aug 2026 or 11 - 15 Aug 2026.</p>
             </div>
             <div className="space-y-1.5">
-              <label className="text-neutral-400 text-xs uppercase tracking-wider">Time</label>
+              <label className="text-neutral-400 text-xs uppercase tracking-wider">Time <span className="normal-case tracking-normal text-neutral-600">(optional)</span></label>
               <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#2563eb] transition-all" />
             </div>
@@ -190,6 +198,12 @@ export default function CreateEventPage() {
               <label className="text-neutral-400 text-xs uppercase tracking-wider">Venue</label>
               <input value={form.venue} onChange={e => setForm({ ...form, venue: e.target.value })} placeholder="Riverfront Arena"
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] transition-all" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-neutral-400 text-xs uppercase tracking-wider">Exact location link <span className="normal-case tracking-normal text-neutral-600">(optional)</span></label>
+              <input type="url" value={form.locationUrl} onChange={e => setForm({ ...form, locationUrl: e.target.value })} placeholder="https://maps.google.com/..."
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-[#2563eb] transition-all" />
+              <p className="text-neutral-600 text-[10px]">Paste the exact Google Maps or venue location URL.</p>
             </div>
           </div>
         </div>
@@ -231,10 +245,11 @@ export default function CreateEventPage() {
           <h2 className="text-white font-semibold">Review & Submit</h2>
           <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3 text-sm">
             <div><span className="text-neutral-500">Event:</span> <span className="text-white ml-2">{form.title}</span></div>
-            <div><span className="text-neutral-500">Date:</span> <span className="text-white ml-2">{form.date} at {form.time}</span></div>
+            <div><span className="text-neutral-500">Date:</span> <span className="text-white ml-2">{form.date}{form.time?` at ${form.time}`:''}</span></div>
             <div><span className="text-neutral-500">Location:</span> <span className="text-white ml-2">{form.venue}, {form.location}</span></div>
             <div><span className="text-neutral-500">Category:</span> <span className="text-white ml-2">{form.category}</span></div>
-            <div><span className="text-neutral-500">Poster:</span> <span className="text-white ml-2">{posterFile?posterFile.name:'Designed fallback artwork'}</span></div>
+            <div><span className="text-neutral-500">Poster:</span> <span className="text-white ml-2">{posterFile?posterFile.name:form.posterUrl?'Image link':'Designed fallback artwork'}</span></div>
+            {form.locationUrl&&<div><span className="text-neutral-500">Location link:</span> <span className="text-white ml-2 break-all">Added</span></div>}
             <div className="pt-2 border-t border-neutral-800">
               <span className="text-neutral-500">Passes:</span>
               {form.passes.filter(p => p.name && p.price > 0).map((p, i) => (

@@ -5,6 +5,7 @@ export interface SellerEvent {
   date: string;
   time: string;
   location: string;
+  locationUrl?: string;
   venue: string;
   category: string;
   posterUrl?: string;
@@ -31,6 +32,7 @@ export interface CreateEventInput {
   date: string;
   time: string;
   location: string;
+  locationUrl?: string;
   venue: string;
   category: string;
   posterUrl?: string;

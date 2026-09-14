@@ -41,6 +41,7 @@ export const events = pgTable('events', {
   date: text('date').notNull(),
   time: text('time').notNull(),
   location: text('location').notNull(),
+  locationUrl: text('location_url'),
   venue: text('venue').notNull(),
   category: text('category').default('Other'),
   sellerId: uuid('seller_id').references(() => users.id),

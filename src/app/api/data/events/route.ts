@@ -5,6 +5,7 @@ import { eq, and, desc, inArray } from 'drizzle-orm';
 import { requireApiUser } from '@/shared/lib/api-auth';
 import { eventPosterUrl } from '@/shared/lib/event-poster';
 import { eventCreateSchema, eventUpdateSchema, validationError } from '@/shared/lib/validation';
+import { eventSortTimestamp, eventTimestamp } from '@/shared/lib/event-date';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
     : await db.select().from(events).orderBy(desc(events.date));
 
   const allPassTypes=allEvents.length?await db.select().from(passTypes).where(inArray(passTypes.eventId,allEvents.map(event=>event.id))):[];
-  const result=allEvents.map(event=>({...event,posterUrl:eventPosterUrl(event.posterUrl),passes:allPassTypes.filter(type=>type.eventId===event.id)}));
+  const result=allEvents.map(event=>({...event,posterUrl:eventPosterUrl(event.posterUrl),passes:allPassTypes.filter(type=>type.eventId===event.id)})).sort((a,b)=>eventSortTimestamp(b.date)-eventSortTimestamp(a.date));
 
   return Response.json(eventId?(result[0]||null):result);
 }
@@ -49,7 +50,8 @@ export async function POST(req: NextRequest) {
   if(!parsed.success)return validationError(parsed.error);
   const body=parsed.data;
 
-  if(new Date(`${body.date}T${body.time}:00+05:30`).getTime()<=Date.now())return Response.json({error:'Event date and time must be in the future'},{status:400});
+  const startsAt=eventTimestamp(body.date,body.time);
+  if(startsAt!==null&&startsAt<=Date.now())return Response.json({error:'Event date must be in the future'},{status:400});
 
   if(!auth.profile.approved)return Response.json({error:'Your seller account is not yet approved.'},{status:403});
 
@@ -64,6 +66,7 @@ export async function POST(req: NextRequest) {
     date: body.date,
     time: body.time,
     location: body.location,
+    locationUrl: body.locationUrl || null,
     venue: body.venue,
     category: category.name,
     posterUrl: body.posterUrl ? String(body.posterUrl).trim().slice(0, 2000) : null,
@@ -99,7 +102,7 @@ export async function PATCH(req: NextRequest) {
   const [existing] = await db.select().from(events).where(and(eq(events.id, body.eventId), eq(events.sellerId, auth.profile.id))).limit(1);
   if (!existing) return Response.json({ error:'Event not found' }, { status:404 });
   if (existing.status !== 'REJECTED') return Response.json({ error:'Only rejected events can be resubmitted' }, { status:409 });
-  if(body.date&&body.time&&new Date(`${body.date}T${body.time}:00+05:30`).getTime()<=Date.now())return Response.json({error:'Event date and time must be in the future'},{status:400});
+  if(body.date){const startsAt=eventTimestamp(body.date,body.time||'');if(startsAt!==null&&startsAt<=Date.now())return Response.json({error:'Event date must be in the future'},{status:400});}
   if(body.category){const [category]=await db.select().from(categories).where(and(eq(categories.name,body.category),eq(categories.active,true))).limit(1);if(!category)return Response.json({error:'Choose an available event category'},{status:400});}
   const {eventId,...changes}=body;
   const [updated] = await db.update(events).set({ ...changes,status:'PENDING_APPROVAL', moderationReason:null }).where(eq(events.id,eventId)).returning();

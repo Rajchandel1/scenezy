@@ -28,7 +28,7 @@ const money = (value: number) =>
   }).format(value);
 
 export function buildWhatsAppBookingMessage(details: WhatsAppBookingDetails) {
-  const date = new Date(details.date).toLocaleDateString('en-IN', {
+  const date = formatEventDate(details.date, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -42,7 +42,7 @@ export function buildWhatsAppBookingMessage(details: WhatsAppBookingDetails) {
     `Event: ${details.eventTitle}`,
     `Pass: ${details.passTypeName}`,
     `Quantity: ${details.quantity}`,
-    `Date & time: ${date}, ${details.time}`,
+    details.time?`Date & time: ${date}, ${details.time}`:`Date: ${date}`,
     `Venue: ${details.venue}, ${details.location}`,
     '',
     `Price: ${money(details.unitPrice)} x ${details.quantity}`,
@@ -66,3 +66,4 @@ export function buildWhatsAppBookingUrl(phone: string, details: WhatsAppBookingD
   }
   return `https://wa.me/${number}?text=${encodeURIComponent(buildWhatsAppBookingMessage(details))}`;
 }
+import { formatEventDate } from '../../../shared/lib/event-date';

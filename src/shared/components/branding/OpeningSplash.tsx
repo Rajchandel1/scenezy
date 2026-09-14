@@ -7,6 +7,7 @@ const INTRO_KEY = 'scenezy_intro_seen_v1';
 
 export function OpeningSplash() {
   const [visible, setVisible] = useState(true);
+  const [storageChecked,setStorageChecked]=useState(false);
   const [leaving, setLeaving] = useState(false);
   const dismissed = useRef(false);
 
@@ -26,16 +27,16 @@ export function OpeningSplash() {
       if (sessionStorage.getItem(INTRO_KEY) === '1') {
         dismissed.current = true;
         setVisible(false);
+        setStorageChecked(true);
         return;
       }
     } catch {}
 
+    setStorageChecked(true);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const fallback = window.setTimeout(dismiss, 12_000);
 
     return () => {
-      window.clearTimeout(fallback);
       document.body.style.overflow = previousOverflow;
     };
   }, [dismiss, visible]);
@@ -48,14 +49,14 @@ export function OpeningSplash() {
       aria-label="Opening Scenezy"
       className={`fixed inset-0 z-[9999] grid place-items-center overflow-hidden bg-black transition-opacity duration-200 ${leaving ? 'opacity-0' : 'opacity-100'}`}
     >
-      <LogoVideoLoader
+      {storageChecked&&<LogoVideoLoader
         size="full"
         loop={false}
         playbackRate={1.3}
         onEnded={dismiss}
         onError={dismiss}
         className="h-full w-full bg-black px-4"
-      />
+      />}
     </div>
   );
 }

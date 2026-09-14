@@ -14,6 +14,7 @@ export interface Pass {
   eventDate: string;
   eventTime: string;
   eventLocation: string;
+  eventLocationUrl?: string | null;
   eventVenue: string;
 }
 

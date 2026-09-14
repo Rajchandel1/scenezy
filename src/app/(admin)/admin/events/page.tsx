@@ -6,6 +6,7 @@ import { LoadingButton } from '@/shared/components/ui/LoadingButton';
 import { Skeleton } from '@/shared/components/ui/States';
 import { useActionDialog } from '@/shared/components/ui/ActionDialog';
 import { invalidateClientCache } from '@/shared/lib/client-data-cache';
+import { formatEventDate } from '@/shared/lib/event-date';
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -66,7 +67,7 @@ export default function AdminEventsPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-white text-sm font-medium">{e.title}</p>
-                <p className="text-neutral-500 text-xs">{new Date(e.date).toLocaleDateString()} · {e.location} · by {e.sellerName}</p>
+                <p className="text-neutral-500 text-xs">{formatEventDate(e.date)} · {e.location} · by {e.sellerName}</p>
                 <div className="flex gap-2 mt-1">
                   <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded border ${statusColors[e.status] || statusColors.CANCELLED}`}>{e.status==='CANCELLED'?'CLOSED':e.status.replace('_', ' ')}</span>
                   <span className="text-[9px] text-neutral-600">{e.passes?.length || 0} passes</span>

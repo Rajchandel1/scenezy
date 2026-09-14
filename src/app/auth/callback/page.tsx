@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { LogoVideoLoader } from '@/shared/components/branding/LogoVideoLoader';
+import { AnimatedLogoLoader } from '@/shared/components/branding/AnimatedLogoLoader';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/shared/lib/supabase-client';
 import { authService } from '@/features/auth';
@@ -113,7 +113,7 @@ export default function AuthCallbackPage() {
           </>
         ) : (
           <>
-            <LogoVideoLoader size="md" showText text={status} />
+            <AnimatedLogoLoader size="md" showText text={status} />
           </>
         )}
       </div>

@@ -7,6 +7,9 @@ import { authService } from '@/features/auth';
 import { LoadingButton } from '@/shared/components/ui/LoadingButton';
 import { Spinner } from '@/shared/components/ui/States';
 
+// Keep the seller onboarding UI ready for a later launch without exposing it now.
+const SHOW_ROLE_SELECTION = false;
+
 function SignUpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -117,8 +120,8 @@ function SignUpContent() {
         <div className="flex-1 h-px bg-neutral-800" />
       </div>
 
-      {/* Role Selection */}
-      <div className="space-y-2">
+      {/* Role Selection — intentionally hidden until seller self-onboarding launches. */}
+      {SHOW_ROLE_SELECTION&&<div className="space-y-2">
         <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider">I want to</label>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => setRole('USER')}
@@ -132,7 +135,7 @@ function SignUpContent() {
             <span className="text-neutral-500 text-[11px]">Create & manage events</span>
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* Email/Password Form */}
       <form onSubmit={handleSubmit} className="space-y-4">

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/features/auth';
 import LandingPage from './(marketing)/page';
-import { LogoVideoLoader } from '@/shared/components/branding/LogoVideoLoader';
+import { AnimatedLogoLoader } from '@/shared/components/branding/AnimatedLogoLoader';
 
 export default function RootPage() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function RootPage() {
   if (checking) {
     return (
       <div className="min-h-screen app-shell flex items-center justify-center">
-        <LogoVideoLoader size="lg" />
+        <AnimatedLogoLoader size="lg" />
       </div>
     );
   }

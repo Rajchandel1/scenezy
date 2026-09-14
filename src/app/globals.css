@@ -54,9 +54,19 @@ html, body {
 .skeleton-block::after { content:''; position:absolute; inset:0; transform:translateX(-120%); background:linear-gradient(90deg,transparent,rgba(148,163,184,.18),transparent); animation:skeleton-wave 1.35s ease-in-out infinite; }
 @keyframes ticket-scan { 0% { transform:translateY(-8px); opacity:0; } 15% { opacity:1; } 85% { opacity:1; } 100% { transform:translateY(62px); opacity:0; } }
 @keyframes loader-bar { 0%,100% { transform:scaleY(.45); opacity:.45; } 50% { transform:scaleY(1); opacity:1; } }
+@keyframes scenezy-logo-breathe { 0%,100% { transform:translateY(0) scale(.96); } 50% { transform:translateY(-3px) scale(1.025); } }
+@keyframes scenezy-logo-ring { 0%,100% { transform:scale(.9); opacity:.15; } 50% { transform:scale(1.08); opacity:.75; } }
+@keyframes scenezy-logo-sheen { 0% { transform:translateX(-160%) skewX(-18deg); } 55%,100% { transform:translateX(190%) skewX(-18deg); } }
 .ticket-scan-line { animation:ticket-scan 1.55s cubic-bezier(.4,0,.2,1) infinite; }
 .loader-bar { transform-origin:center; animation:loader-bar .85s ease-in-out infinite; }
 .loader-bar:nth-child(2) { animation-delay:.12s; }.loader-bar:nth-child(3) { animation-delay:.24s; }.loader-bar:nth-child(4) { animation-delay:.36s; }
+.scenezy-logo-loader-mark { animation:scenezy-logo-breathe 1.55s ease-in-out infinite; }
+.scenezy-logo-loader-ring { animation:scenezy-logo-ring 1.55s ease-in-out infinite; }
+.scenezy-logo-loader-sheen::after { content:''; position:absolute; inset:-20%; width:34%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent); animation:scenezy-logo-sheen 2.1s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scenezy-logo-loader-mark,.scenezy-logo-loader-ring,.scenezy-logo-loader-sheen::after { animation-duration:3.5s; }
+}
 
 [data-theme='light'] body {
   color: var(--ink);

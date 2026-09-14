@@ -3,6 +3,7 @@ import { db } from '@/shared/db';
 import { events, passes, orders, entries, users, passTypes } from '@/shared/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { requireApiUser } from '@/shared/lib/api-auth';
+import { eventSortTimestamp, isEventPast } from '@/shared/lib/event-date';
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiUser(['SELLER', 'ADMIN']);
@@ -34,8 +35,8 @@ export async function GET(req: NextRequest) {
   const now = new Date();
 
   if (action === 'dashboard') {
-    const activeEvents = sellerEvents.filter(e => e.status === 'ACTIVE' && new Date(e.date) >= now);
-    const pastEvents = sellerEvents.filter(e => new Date(e.date) < now || e.status === 'CANCELLED');
+    const activeEvents = sellerEvents.filter(e => e.status === 'ACTIVE' && !isEventPast(e.date,e.time));
+    const pastEvents = sellerEvents.filter(e => isEventPast(e.date,e.time) || e.status === 'CANCELLED');
     const pendingEvents = sellerEvents.filter(e => e.status === 'PENDING_APPROVAL');
 
     const paidOrders=sellerOrders.filter(order=>order.orderStatus==='PAID');
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
       const totalCapacity=pts.reduce((sum,type)=>sum+type.available+type.sold,0);
       const totalSold=pts.reduce((sum,type)=>sum+type.sold,0);
       return {...event,passes:pts,totalSold,totalCapacity,revenue:paidOrders.filter(order=>order.eventId===event.id).reduce((sum,order)=>sum+(order.total||0),0),checkedIn:sellerEntries.filter(entry=>entry.eventId===event.id&&entry.result==='VALID').length,sellPercentage:totalCapacity?Math.round(totalSold/totalCapacity*100):0};
-    }).sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime());
+    }).sort((a,b)=>eventSortTimestamp(b.date)-eventSortTimestamp(a.date));
     return Response.json({
       overview: {
         totalRevenue, monthRevenue,
@@ -79,8 +80,8 @@ export async function GET(req: NextRequest) {
   if (action === 'events') {
     const tab = searchParams.get('tab') || 'active';
     let filtered = sellerEvents;
-    if (tab === 'active') filtered = sellerEvents.filter(e => e.status === 'ACTIVE' && new Date(e.date) >= now);
-    else if (tab === 'past') filtered = sellerEvents.filter(e => new Date(e.date) < now || e.status === 'CANCELLED');
+    if (tab === 'active') filtered = sellerEvents.filter(e => e.status === 'ACTIVE' && !isEventPast(e.date,e.time));
+    else if (tab === 'past') filtered = sellerEvents.filter(e => isEventPast(e.date,e.time) || e.status === 'CANCELLED');
     else if (tab === 'pending') filtered = sellerEvents.filter(e => e.status === 'PENDING_APPROVAL');
 
     const enriched = filtered.map((event) => {
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return Response.json(enriched.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    return Response.json(enriched.sort((a, b) => eventSortTimestamp(b.date) - eventSortTimestamp(a.date)));
   }
 
   if (action === 'event-detail') {

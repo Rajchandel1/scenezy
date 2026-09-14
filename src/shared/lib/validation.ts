@@ -5,8 +5,8 @@ export const uuidSchema=z.string().uuid();
 
 export const eventCreateSchema=z.object({
   title:cleanText(120),description:z.string().trim().max(5000).optional().default(''),
-  date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),time:z.string().regex(/^\d{2}:\d{2}$/),
-  location:cleanText(120),venue:cleanText(160),category:cleanText(50),
+  date:cleanText(80),time:z.union([z.literal(''),z.string().regex(/^\d{2}:\d{2}$/)]).default(''),
+  location:cleanText(120),locationUrl:z.string().trim().max(2000).refine(value=>!value||value.startsWith('https://'),'Location URL must use HTTPS').optional().default(''),venue:cleanText(160),category:cleanText(50),
   posterUrl:z.string().trim().max(2000).refine(value=>!value||value.startsWith('https://')||value.startsWith('/api/data/uploads/event-poster?path='),'Invalid poster URL').optional().default(''),
   passes:z.array(z.object({name:cleanText(60),price:z.number().int().min(0).max(10_000_000),benefits:z.string().trim().max(500).optional().default(''),available:z.number().int().min(1).max(1_000_000),transferAllowed:z.boolean().optional().default(true)})).min(1).max(20),
 });

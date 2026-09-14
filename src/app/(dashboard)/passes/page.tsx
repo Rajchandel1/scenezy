@@ -9,6 +9,7 @@ import { SearchBar } from '@/shared/components/ui/SearchBar';
 import { FilterTabs } from '@/shared/components/ui/FilterTabs';
 import { useSearchFilter } from '@/shared/hooks/useSearchFilter';
 import { useClientQuery } from '@/shared/hooks/useClientQuery';
+import { formatEventDate } from '@/shared/lib/event-date';
 
 interface Pass {
   id: string;
@@ -27,8 +28,7 @@ const statusFilters = [
 ];
 
 function PassCard({ pass }: { pass: Pass }) {
-  const dateObj = new Date(pass.eventDate);
-  const dateStr = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const dateStr = formatEventDate(pass.eventDate);
   
   const statusColors: Record<string, string> = {
     ACTIVE: 'bg-green-950/30 text-green-400 border-green-900/50',

@@ -7,6 +7,7 @@ import { createRazorpayOrder, fetchRazorpayPayment, verifyPaymentSignature } fro
 import { fulfillPaidOrder } from '@/shared/lib/fulfill-order';
 import { orderCreateSchema, validationError } from '@/shared/lib/validation';
 import { checkRateLimit, rateLimitResponse } from '@/shared/lib/rate-limiter';
+import { eventTimestamp } from '@/shared/lib/event-date';
 
 export async function GET(req:NextRequest){
   const auth=await requireApiUser();
@@ -43,8 +44,8 @@ export async function POST(req:NextRequest){
     }
     const [event]=await db.select().from(events).where(and(eq(events.id,eventId),eq(events.status,'ACTIVE'))).limit(1);
     if(!event)return Response.json({error:'This event is unavailable'},{status:400});
-    const eventStartsAt=new Date(`${event.date}T${event.time}:00+05:30`).getTime();
-    if(!Number.isFinite(eventStartsAt)||eventStartsAt<=Date.now())return Response.json({error:'Booking for this event has closed'},{status:409});
+    const eventStartsAt=eventTimestamp(event.date,event.time);
+    if(eventStartsAt!==null&&eventStartsAt<=Date.now())return Response.json({error:'Booking for this event has closed'},{status:409});
     const normalized=[] as Array<{passTypeId:string;passTypeName:string;quantity:number;unitPrice:number;total:number}>;
     for(const requestItem of requestedItems){
       const [type]=await db.select().from(passTypes).where(and(eq(passTypes.id,requestItem.passTypeId),eq(passTypes.eventId,event.id))).limit(1);

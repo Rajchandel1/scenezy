@@ -7,18 +7,19 @@ import { SearchBar } from '@/shared/components/ui/SearchBar';
 import { FilterTabs } from '@/shared/components/ui/FilterTabs';
 import { EmptyState, ErrorState, EventCardSkeleton } from '@/shared/components/ui/States';
 import { useClientQuery } from '@/shared/hooks/useClientQuery';
+import { eventDateParts, eventSortTimestamp } from '@/shared/lib/event-date';
 
 interface Event { id:string;title:string;date:string;time:string;location:string;venue:string;category:string;posterUrl?:string|null;passes:Array<{price:number}> }
 interface ContentPayload {events:Event[];categories:Array<{name:string}>}
 
 function Artwork({event,featured}:{event:Event;featured:boolean}){
-  const date=new Date(event.date);
+  const date=eventDateParts(event.date);
   return <div className={`relative bg-gradient-to-br from-blue-950 via-blue-700 to-indigo-400 overflow-hidden ${featured?'h-56 sm:h-full':'h-40'}`}>
     {event.posterUrl&&<img src={event.posterUrl} alt={`${event.title} poster`} loading={featured?'eager':'lazy'} fetchPriority={featured?'high':'auto'} decoding="async" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"/>}
     <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-black/15"/>
     {!event.posterUrl&&<div className="absolute w-48 h-48 rounded-full border-[24px] border-white/10 -top-16 -right-8"/>}
     <span className="absolute left-4 top-4 text-white/80 eyebrow">{event.category}</span>
-    <div className="absolute bottom-4 left-4 text-white"><p className="display-serif text-4xl leading-none">{date.getDate()}</p><p className="text-[10px] uppercase tracking-[.18em]">{date.toLocaleDateString('en-IN',{month:'short',weekday:'short'})}</p></div>
+    <div className="absolute bottom-4 left-4 text-white"><p className="display-serif text-4xl leading-none">{date.day}</p>{(date.month||date.weekday)&&<p className="text-[10px] uppercase tracking-[.18em]">{[date.month,date.weekday].filter(Boolean).join(' ')}</p>}</div>
   </div>;
 }
 
@@ -26,7 +27,7 @@ export default function ExplorePage(){
   const [search,setSearch]=useState(''),[category,setCategory]=useState('all');
   const fetchContent=useCallback(async()=>{const response=await fetch('/api/data/content');if(!response.ok)throw new Error('Explore is unavailable right now.');return response.json() as Promise<ContentPayload>;},[]);
   const {data,loading,error,refresh}=useClientQuery({key:'public:content',fetcher:fetchContent,freshForMs:60_000,retainForMs:10*60_000});
-  const events=useMemo(()=>[...(data?.events||[])].sort((a,b)=>+new Date(a.date)-+new Date(b.date)),[data]);
+  const events=useMemo(()=>[...(data?.events||[])].sort((a,b)=>eventSortTimestamp(a.date)-eventSortTimestamp(b.date)),[data]);
   const tabs=useMemo(()=>[{id:'all',label:'Everything'},...(data?.categories||[]).map(item=>({id:item.name,label:item.name}))],[data]);
   const filtered=useMemo(()=>events.filter(event=>(category==='all'||event.category===category)&&`${event.title} ${event.location} ${event.venue}`.toLowerCase().includes(search.toLowerCase())),[events,category,search]);
   return <div className="px-5 sm:px-6 pt-7 pb-5 space-y-7">

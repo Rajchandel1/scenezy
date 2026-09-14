@@ -6,6 +6,7 @@ import { authService } from '@/features/auth';
 import { SellerService } from '@/features/seller';
 import { LoadingButton } from '@/shared/components/ui/LoadingButton';
 import { DashboardSkeleton } from '@/shared/components/ui/States';
+import { formatEventDate } from '@/shared/lib/event-date';
 
 interface PassBreakdown { id: string; name: string; price: number; sold: number; total: number; revenue: number; sellPercentage: number; available: number; transferAllowed: boolean; }
 interface Buyer { orderId: string; userName: string; userEmail: string; items: any[]; total: number; createdAt: string; paymentStatus: string; }
@@ -35,7 +36,7 @@ export default function SellerEventDetailPage() {
       if (u) {
         const d = await SellerService.getEventDetail(u.id, params.id as string);
         setData(d);
-        setDraft(d?.event?{title:d.event.title,description:d.event.description,date:d.event.date,time:d.event.time,location:d.event.location,venue:d.event.venue,category:d.event.category}:null);
+        setDraft(d?.event?{title:d.event.title,description:d.event.description,date:d.event.date,time:d.event.time,location:d.event.location,locationUrl:d.event.locationUrl||'',venue:d.event.venue,category:d.event.category}:null);
       }
       setLoaded(true);
     }
@@ -62,11 +63,11 @@ export default function SellerEventDetailPage() {
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-white text-base font-bold truncate">{event.title}</h1>
-          <p className="text-neutral-500 text-[10px]">{new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {event.time} · {event.location}</p>
+          <p className="text-neutral-500 text-[10px]">{formatEventDate(event.date)}{event.time?` · ${event.time}`:''} · {event.location}</p>
         </div>
       </div>
 
-      {event.status === 'REJECTED' && draft&&<div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 space-y-3"><div><p className="text-amber-300 text-sm font-semibold">Changes requested</p><p className="text-neutral-400 text-xs mt-1 leading-relaxed">{event.moderationReason || 'Review your event information before submitting again.'}</p></div><div className="grid gap-2"><input className="app-input rounded-xl px-3 py-2 text-sm" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} placeholder="Event title"/><textarea className="app-input rounded-xl px-3 py-2 text-sm resize-none" rows={3} value={draft.description||''} onChange={e=>setDraft({...draft,description:e.target.value})} placeholder="Description"/><div className="grid grid-cols-2 gap-2"><input type="date" className="app-input rounded-xl px-3 py-2 text-sm" value={draft.date} onChange={e=>setDraft({...draft,date:e.target.value})}/><input type="time" className="app-input rounded-xl px-3 py-2 text-sm" value={draft.time} onChange={e=>setDraft({...draft,time:e.target.value})}/></div><div className="grid grid-cols-2 gap-2"><input className="app-input rounded-xl px-3 py-2 text-sm" value={draft.venue} onChange={e=>setDraft({...draft,venue:e.target.value})} placeholder="Venue"/><input className="app-input rounded-xl px-3 py-2 text-sm" value={draft.location} onChange={e=>setDraft({...draft,location:e.target.value})} placeholder="City"/></div></div>{submitError&&<p className="text-red-400 text-xs">{submitError}</p>}<LoadingButton loading={resubmitting} loadingLabel="Resubmitting..." onClick={resubmit} className="bg-blue-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">Save changes and resubmit</LoadingButton></div>}
+      {event.status === 'REJECTED' && draft&&<div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 space-y-3"><div><p className="text-amber-300 text-sm font-semibold">Changes requested</p><p className="text-neutral-400 text-xs mt-1 leading-relaxed">{event.moderationReason || 'Review your event information before submitting again.'}</p></div><div className="grid gap-2"><input className="app-input rounded-xl px-3 py-2 text-sm" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} placeholder="Event title"/><textarea className="app-input rounded-xl px-3 py-2 text-sm resize-none" rows={3} value={draft.description||''} onChange={e=>setDraft({...draft,description:e.target.value})} placeholder="Description"/><div className="grid grid-cols-2 gap-2"><input type="text" className="app-input rounded-xl px-3 py-2 text-sm" value={draft.date} onChange={e=>setDraft({...draft,date:e.target.value})} placeholder="11 - 15 Aug 2026"/><input type="time" className="app-input rounded-xl px-3 py-2 text-sm" value={draft.time} onChange={e=>setDraft({...draft,time:e.target.value})} aria-label="Time (optional)"/></div><div className="grid grid-cols-2 gap-2"><input className="app-input rounded-xl px-3 py-2 text-sm" value={draft.venue} onChange={e=>setDraft({...draft,venue:e.target.value})} placeholder="Venue"/><input className="app-input rounded-xl px-3 py-2 text-sm" value={draft.location} onChange={e=>setDraft({...draft,location:e.target.value})} placeholder="City"/></div><input type="url" className="app-input rounded-xl px-3 py-2 text-sm" value={draft.locationUrl||''} onChange={e=>setDraft({...draft,locationUrl:e.target.value})} placeholder="Exact location link (optional)"/></div>{submitError&&<p className="text-red-400 text-xs">{submitError}</p>}<LoadingButton loading={resubmitting} loadingLabel="Resubmitting..." onClick={resubmit} className="bg-blue-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">Save changes and resubmit</LoadingButton></div>}
 
       {/* Revenue Card */}
       <div className="bg-gradient-to-br from-[#2563eb]/10 to-neutral-900 border border-[#2563eb]/20 rounded-xl p-4">

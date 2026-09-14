@@ -6,6 +6,7 @@ import { authService, AuthUser } from '@/features/auth';
 import { PassService, Pass } from '@/features/passes';
 import { TransferService, Transfer } from '@/features/transfers';
 import { PageLoading } from '@/shared/components/ui/States';
+import { formatEventDate } from '@/shared/lib/event-date';
 
 export default function TransferPage() {
   const params = useParams();
@@ -109,7 +110,7 @@ export default function TransferPage() {
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-2">
           <p className="text-[#2563eb] text-xs font-medium uppercase tracking-wider">{pass.passTypeName}</p>
           <p className="text-white font-semibold">{pass.eventTitle}</p>
-          <p className="text-neutral-500 text-xs">{new Date(pass.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {pass.eventTime}</p>
+          <p className="text-neutral-500 text-xs">{formatEventDate(pass.eventDate)}{pass.eventTime?` · ${pass.eventTime}`:''}</p>
         </div>
 
         {!success ? (

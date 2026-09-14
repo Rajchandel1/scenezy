@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { AnimatedLogoLoader } from '@/shared/components/branding/AnimatedLogoLoader';
 
 export function Skeleton({ className = '' }: { className?: string }) {
   return <div aria-hidden="true" className={`skeleton-block rounded-xl ${className}`} />;
@@ -70,15 +71,8 @@ export function ListRowSkeleton() {
 
 export function PageLoading({ message = 'Loading...' }: { message?: string }) {
   return (
-    <div role="status" aria-live="polite" className="min-h-[45vh] flex flex-col items-center justify-center py-16 space-y-5">
-      <div className="relative w-32 h-20 rounded-2xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden shadow-xl">
-        <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-[var(--canvas)]"/><div className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-[var(--canvas)]"/>
-        <div className="absolute inset-x-4 top-4 flex items-center justify-between"><span className="text-[8px] text-blue-500 font-black tracking-[.2em]">SCENEZY</span><span className="w-5 h-2 rounded-sm bg-blue-600/80"/></div>
-        <div className="absolute left-4 right-4 top-9 border-t border-dashed border-[var(--line)]"/>
-        <div className="absolute left-4 right-4 bottom-3 h-5 flex gap-1 items-stretch">{[2,1,3,1,2,1,3,2,1,2,3].map((width,index)=><span key={index} className="bg-[var(--ink)] opacity-65" style={{width}}/>)}</div>
-        <div className="ticket-scan-line absolute left-3 right-3 top-1 h-px bg-blue-500 shadow-[0_0_10px_2px_rgba(49,88,212,.65)]"/>
-      </div>
-      <div className="text-center"><p className="display-serif text-lg text-[var(--ink)]">Preparing your pass</p><p className="muted text-xs mt-1">{message}</p></div>
+    <div className="min-h-[45vh] flex items-center justify-center py-16">
+      <AnimatedLogoLoader size="md" showText text={message}/>
     </div>
   );
 }

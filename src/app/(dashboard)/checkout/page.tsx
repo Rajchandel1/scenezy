@@ -7,6 +7,7 @@ import { buildWhatsAppBookingUrl } from '@/features/orders/services/whatsapp-che
 import { PageLoading, Spinner } from '@/shared/components/ui/States';
 import Link from 'next/link';
 import { MessageCircle, ShieldCheck } from 'lucide-react';
+import { formatEventDate } from '@/shared/lib/event-date';
 
 interface CheckoutEvent { id:string; title:string; date:string; time:string; location:string; venue:string; passes:Array<{ id:string; name:string; price:number }> }
 interface RazorpayResult { razorpay_order_id:string; razorpay_payment_id:string; razorpay_signature:string }
@@ -155,7 +156,7 @@ return (
       <div className="flex items-center justify-between pb-4 ticket-rule">
         <div>
           <p className="text-white font-semibold text-sm">{event.title}</p>
-          <p className="text-neutral-500 text-xs mt-0.5">{new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {event.time}</p>
+          <p className="text-neutral-500 text-xs mt-0.5">{formatEventDate(event.date)}{event.time?` · ${event.time}`:''}</p>
         </div>
         <span className="text-[10px] bg-neutral-800 text-neutral-400 px-2 py-1 rounded-md uppercase">{passType.name}</span>
       </div>

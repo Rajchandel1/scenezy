@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { authService } from '@/features/auth';
+import { formatEventDate } from '@/shared/lib/event-date';
 import { DashboardSkeleton, EmptyState, ErrorState } from '@/shared/components/ui/States';
 import { SearchBar } from '@/shared/components/ui/SearchBar';
 import { FilterTabs } from '@/shared/components/ui/FilterTabs';
@@ -126,7 +127,7 @@ export default function SellerDashboardPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-neutral-500">
-                  <span>{new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                  <span>{formatEventDate(event.date)}</span>
                   <div className="flex items-center gap-3">
                     <span>{event.totalSold} sold</span>
                     <span className="text-[#2563eb] font-medium">₹{event.revenue}</span>
