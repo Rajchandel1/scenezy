@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/features/auth';
@@ -20,13 +19,21 @@ export default function CreateEventPage() {
   const [created, setCreated] = useState(false);
   const [categories,setCategories]=useState(FALLBACK_CATEGORIES);
   const [posterFile,setPosterFile]=useState<File|null>(null),[posterPreview,setPosterPreview]=useState('');
-
+  
   const [form, setForm] = useState({
     title: '', description: '', posterUrl: '', date: '', time: '', location: '', locationUrl: '', venue: '', category: 'Party',
     passes: [{ name: 'General', price: 499, benefits: 'Standard entry', available: 100, transferAllowed: true }] as PassInput[],
   });
 
-  useEffect(()=>{fetch('/api/data/content').then(response=>response.ok?response.json():null).then(data=>{const names=data?.categories?.map((item:{name:string})=>item.name);if(names?.length){setCategories(names);setForm(current=>names.includes(current.category)?current:{...current,category:names[0]});}}).catch(()=>undefined);},[]);
+  useEffect(()=>{
+    fetch('/api/data/content').then(response=>response.ok?response.json():null).then(data=>{
+      const names=data?.categories?.map((item:{name:string})=>item.name);
+      if(names?.length){
+        setCategories(names);
+        setForm(current=>names.includes(current.category)?current:{...current,category:names[0]});
+      }
+    }).catch(()=>undefined);
+  },[]);
 
   const addPassType = () => {
     setForm({ ...form, passes: [...form.passes, { name: '', price: 0, benefits: '', available: 100, transferAllowed: true }] });
@@ -46,19 +53,23 @@ export default function CreateEventPage() {
   const handleSubmit = async () => {
     const user = await authService.getCurrentUser();
     if (!user) return;
+    
     setLoading(true);
     setError('');
-
     let uploadedPath='';
+    
     try {
       let posterUrl=form.posterUrl;
       if(posterFile){
-        const uploadBody=new FormData();uploadBody.append('file',posterFile);
+        const uploadBody=new FormData();
+        uploadBody.append('file',posterFile);
         const upload=await fetch('/api/data/uploads/event-poster',{method:'POST',body:uploadBody});
         const uploaded=await upload.json();
-        if(!upload.ok)throw new Error(uploaded.error||'Poster upload failed');
-        posterUrl=uploaded.url;uploadedPath=uploaded.path;
+        if(!upload.ok) throw new Error(uploaded.error||'Poster upload failed');
+        posterUrl=uploaded.url;
+        uploadedPath=uploaded.path;
       }
+
       await SellerService.createEvent({
         ...form,
         posterUrl,
@@ -66,11 +77,16 @@ export default function CreateEventPage() {
         sellerName: user.name,
         passes: form.passes.filter(p => p.name && p.price > 0),
       });
+      
       invalidateClientCache('public:content');
       setCreated(true);
-    } catch (err) {
-      if(uploadedPath)fetch('/api/data/uploads/event-poster',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:uploadedPath})}).catch(()=>undefined);
-      setError(err instanceof Error ? err.message : 'Failed to create event');
+    } catch (err: any) {
+      if(uploadedPath) fetch('/api/data/uploads/event-poster',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:uploadedPath})}).catch(()=>undefined);
+      
+      // Show detailed error message
+      const msg = err instanceof Error ? err.message : 'Failed to create event';
+      setError(msg);
+      console.error("Creation Error:", err);
     } finally {
       setLoading(false);
     }
@@ -84,7 +100,11 @@ export default function CreateEventPage() {
     if(posterPreview)URL.revokeObjectURL(posterPreview);
     setPosterFile(file);setPosterPreview(URL.createObjectURL(file));setForm(current=>({...current,posterUrl:''}));
   };
-  const removePoster=()=>{if(posterPreview)URL.revokeObjectURL(posterPreview);setPosterFile(null);setPosterPreview('');setForm(current=>({...current,posterUrl:''}));};
+
+  const removePoster=()=>{
+    if(posterPreview)URL.revokeObjectURL(posterPreview);
+    setPosterFile(null);setPosterPreview('');setForm(current=>({...current,posterUrl:''}));
+  };
 
   const canProceed = () => {
     if (step === 1) return form.title.trim().length > 0;
@@ -126,7 +146,7 @@ export default function CreateEventPage() {
 
       <div className="flex gap-1.5">
         {[1, 2, 3, 4, 5].map(s => (
-          <div key={s} className={`h-1.5 flex-1 rounded-full transition-all ${s <= step ? 'bg-[#2563eb]' : 'bg-neutral-800'}`} />
+          <div key={s} className={`h-1.5 flex-1 rounded-full transition-all ${s <= step ? 'bg-blue-600' : 'bg-neutral-800'}`} />
         ))}
       </div>
       <p className="text-neutral-500 text-xs text-center">Step {step} of 5</p>
@@ -260,8 +280,8 @@ export default function CreateEventPage() {
               ))}
             </div>
           </div>
-          <div className="bg-yellow-950/20 border border-yellow-900/40 rounded-xl p-3">
-            <p className="text-yellow-400/80 text-xs"> Your event will be submitted for admin approval. It won't appear in Explore until approved.</p>
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+            <p className="text-amber-800 dark:text-amber-300 text-xs font-medium">Your event will be submitted for admin approval. It won't appear in Explore until approved.</p>
           </div>
           {error && <div className="bg-red-950/30 border border-red-900/50 text-red-400 text-sm rounded-xl px-4 py-3">{error}</div>}
         </div>
